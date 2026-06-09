@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { ConfettiComplete } from '../components/ConfettiComplete';
+import { GomaNotifier } from '../components/GomaNotifier';
 import { InitialGrid } from '../components/InitialGrid';
 import { StudentBadge } from '../components/StudentBadge';
 import { getTodayDateKey } from '../lib/date';
 import { INITIALS } from '../lib/initials';
-import { getLocalEntries, getLocalRound, insertLocalEntry, updateLocalEntry } from '../lib/localData';
+import { deleteLocalEntry, getLocalEntries, getLocalRound, insertLocalEntry, updateLocalEntry } from '../lib/localData';
 import { useRealtimeBoard } from '../lib/realtime';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { validateWord } from '../lib/validation';
@@ -66,6 +67,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
 
   const submittedEntry = entries.find((entry) => entry.student_number === studentNumber);
   const completedCount = entries.length;
+  const remainingCount = Math.max(INITIALS.length - completedCount, 0);
   const complete = completedCount === INITIALS.length;
 
   function handleSelectInitial(initial: Initial) {
@@ -83,6 +85,13 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
 
     setSubmitMessage('');
     setPendingWord(draftWord.trim());
+  }
+
+  function handleCancelSelection() {
+    setSelectedInitial(null);
+    setDraftWord('');
+    setPendingWord('');
+    setSubmitMessage('');
   }
 
   async function submitWord(initial: Initial, input: string): Promise<string | null> {
@@ -162,6 +171,38 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
     setPendingWord('');
   }
 
+  async function handleDeleteSubmittedEntry() {
+    if (!submittedEntry || !window.confirm('삭제할까요?')) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitMessage('');
+
+    if (!isSupabaseConfigured) {
+      deleteLocalEntry(submittedEntry.id);
+      setSelectedInitial(null);
+      setDraftWord('');
+      setPendingWord('');
+      setIsSubmitting(false);
+      await fetchBoard();
+      return;
+    }
+
+    const { error } = await supabase.from('entries').delete().eq('id', submittedEntry.id).eq('student_number', studentNumber);
+    setIsSubmitting(false);
+
+    if (error) {
+      setSubmitMessage(error.message);
+      return;
+    }
+
+    setSelectedInitial(null);
+    setDraftWord('');
+    setPendingWord('');
+    await fetchBoard();
+  }
+
   return (
     <main className="app-shell student-shell">
       <header className="app-header">
@@ -199,10 +240,22 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
             onSubmit: handleRequestSubmit,
             onConfirm: handleConfirmSubmit,
             onCancelConfirm: () => setPendingWord(''),
+            onCancel: handleCancelSelection,
           }}
           onSelect={handleSelectInitial}
+          onDelete={submittedEntry ? handleDeleteSubmittedEntry : undefined}
         />
       </section>
+
+      <GomaNotifier
+        remainingCount={remainingCount}
+        selectedInitial={selectedInitial}
+        submittedEntry={submittedEntry}
+        submitMessage={submitMessage}
+        isLoading={isLoading}
+        loadError={loadError}
+        complete={complete}
+      />
     </main>
   );
 }

@@ -2,10 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TeacherDashboard } from '../components/TeacherDashboard';
 import { TeacherLogin } from '../components/TeacherLogin';
 import { getTodayDateKey } from '../lib/date';
-import { deleteLocalEntry, getLocalEntries, getLocalRound, upsertLocalRound } from '../lib/localData';
+import { deleteLocalEntriesByDate, deleteLocalEntry, getLocalEntries, getLocalRound, getLocalRounds, upsertLocalRound } from '../lib/localData';
 import { useRealtimeBoard } from '../lib/realtime';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { clearTeacherToken, deleteEntry, getTeacherToken, loginTeacher, saveTeacherToken, updateTopic } from '../lib/teacherApi';
+import {
+  clearTeacherToken,
+  deleteEntriesByDate,
+  deleteEntry,
+  getTeacherToken,
+  loginTeacher,
+  saveTeacherToken,
+  updateTopic,
+} from '../lib/teacherApi';
 import type { Entry, Round } from '../types/app';
 
 type TeacherPageProps = {
@@ -17,6 +25,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
   const [token, setToken] = useState<string | null>(() => getTeacherToken());
   const [selectedDate, setSelectedDate] = useState(todayDate);
   const [round, setRound] = useState<Round | null>(null);
+  const [savedTopics, setSavedTopics] = useState<string[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loadError, setLoadError] = useState('');
 
@@ -25,13 +34,15 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
 
     if (!isSupabaseConfigured) {
       setRound(getLocalRound(selectedDate));
+      setSavedTopics(getLocalRounds().map((localRound) => localRound.topic));
       setEntries(getLocalEntries(selectedDate));
       return;
     }
 
-    const [roundResult, entriesResult] = await Promise.all([
+    const [roundResult, entriesResult, savedTopicsResult] = await Promise.all([
       supabase.from('rounds').select('*').eq('round_date', selectedDate).maybeSingle(),
       supabase.from('entries').select('*').eq('round_date', selectedDate).order('created_at', { ascending: true }),
+      supabase.from('rounds').select('topic'),
     ]);
 
     if (roundResult.error) {
@@ -44,6 +55,12 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
       setLoadError(entriesResult.error.message);
     } else {
       setEntries((entriesResult.data ?? []) as Entry[]);
+    }
+
+    if (savedTopicsResult.error) {
+      setLoadError(savedTopicsResult.error.message);
+    } else {
+      setSavedTopics((savedTopicsResult.data ?? []).map((savedRound) => savedRound.topic));
     }
   }, [selectedDate]);
 
@@ -112,6 +129,26 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     await fetchBoard();
   }
 
+  async function handleDeleteAllEntries() {
+    if (!token || entries.length === 0 || !window.confirm('1~23번 제출을 모두 삭제할까요?')) {
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      deleteLocalEntriesByDate(selectedDate);
+      await fetchBoard();
+      return;
+    }
+
+    const result = await deleteEntriesByDate(token, selectedDate);
+    if (result.error) {
+      setLoadError(result.error);
+      return;
+    }
+
+    await fetchBoard();
+  }
+
   if (!token) {
     return <TeacherLogin onLogin={handleLogin} onBack={onChangeNumber} />;
   }
@@ -123,11 +160,13 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
         selectedDate={selectedDate}
         todayDate={todayDate}
         round={round}
+        savedTopics={savedTopics}
         entries={entries}
         completedCount={entries.length}
         onDateChange={setSelectedDate}
         onTopicSave={handleTopicSave}
         onDeleteEntry={handleDeleteEntry}
+        onDeleteAllEntries={handleDeleteAllEntries}
         onLogout={handleLogout}
       />
     </>

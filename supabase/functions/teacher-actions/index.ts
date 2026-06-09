@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 type TeacherAction =
   | { action: 'login'; password: string }
   | { action: 'updateTopic'; token: string; date: string; topic: string }
-  | { action: 'deleteEntry'; token: string; entryId: string };
+  | { action: 'deleteEntry'; token: string; entryId: string }
+  | { action: 'deleteEntriesByDate'; token: string; date: string };
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -95,6 +96,15 @@ Deno.serve(async (req) => {
       }
 
       return jsonResponse({ data: { id: body.entryId } });
+    }
+
+    if (body.action === 'deleteEntriesByDate') {
+      const { error } = await supabase.from('entries').delete().eq('round_date', body.date);
+      if (error) {
+        return jsonResponse({ error: error.message }, 500);
+      }
+
+      return jsonResponse({ data: { date: body.date } });
     }
 
     return jsonResponse({ error: '알 수 없는 작업입니다.' }, 400);

@@ -17,6 +17,7 @@ type InitialGridProps = {
     onSubmit: () => void;
     onConfirm: () => void;
     onCancelConfirm: () => void;
+    onCancel: () => void;
   };
   teacherMode?: boolean;
   onSelect?: (initial: Initial) => void;

@@ -5,10 +5,15 @@ const RANDOM_TOPICS = ['동물', '음식', '식물', '직업', '탈것', '학교
 
 type TopicEditorProps = {
   topic: string;
+  savedTopics: string[];
   onSave: (topic: string) => Promise<string | null>;
 };
 
-export function TopicEditor({ topic, onSave }: TopicEditorProps) {
+function normalizeTopic(topic: string): string {
+  return topic.trim();
+}
+
+export function TopicEditor({ topic, savedTopics, onSave }: TopicEditorProps) {
   const [draft, setDraft] = useState(topic);
   const [message, setMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -31,7 +36,15 @@ export function TopicEditor({ topic, onSave }: TopicEditorProps) {
   }
 
   async function handleRandomTopic() {
-    const nextTopic = RANDOM_TOPICS[Math.floor(Math.random() * RANDOM_TOPICS.length)];
+    const savedTopicSet = new Set(savedTopics.map(normalizeTopic).filter(Boolean));
+    const availableTopics = RANDOM_TOPICS.filter((randomTopic) => !savedTopicSet.has(normalizeTopic(randomTopic)));
+
+    if (availableTopics.length === 0) {
+      setMessage('저장하지 않은 랜덤 주제가 없어요.');
+      return;
+    }
+
+    const nextTopic = availableTopics[Math.floor(Math.random() * availableTopics.length)];
     setDraft(nextTopic);
     await saveTopic(nextTopic);
   }

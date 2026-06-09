@@ -138,6 +138,13 @@ with check (
   and char_length(trim(word)) between 1 and 6
 );
 
+drop policy if exists "students can delete entries" on public.entries;
+create policy "students can delete entries"
+on public.entries
+for delete
+to anon
+using (student_number between 1 and 23);
+
 do $$
 begin
   begin

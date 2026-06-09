@@ -33,6 +33,10 @@ export function getLocalRound(date: string): Round | null {
   return rounds.find((round) => round.round_date === date) ?? null;
 }
 
+export function getLocalRounds(): Round[] {
+  return readJson<Round[]>(LOCAL_ROUNDS_KEY, []);
+}
+
 export function upsertLocalRound(date: string, topic: string): Round {
   const rounds = readJson<Round[]>(LOCAL_ROUNDS_KEY, []);
   const now = new Date().toISOString();
@@ -116,5 +120,13 @@ export function deleteLocalEntry(entryId: string): void {
   writeJson(
     LOCAL_ENTRIES_KEY,
     entries.filter((entry) => entry.id !== entryId),
+  );
+}
+
+export function deleteLocalEntriesByDate(date: string): void {
+  const entries = readJson<LocalEntry[]>(LOCAL_ENTRIES_KEY, []);
+  writeJson(
+    LOCAL_ENTRIES_KEY,
+    entries.filter((entry) => entry.round_date !== date),
   );
 }

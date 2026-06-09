@@ -192,10 +192,17 @@ h2 {
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.05);
 }
 
+.danger-button {
+  background: var(--pink);
+  color: var(--ink);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
 .student-shell {
   display: grid;
   min-height: calc(100vh - 92px);
   align-content: start;
+  padding-bottom: clamp(180px, 20vw, 250px);
 }
 
 .student-shell .app-header {
@@ -257,6 +264,147 @@ h2 {
     inset 0 1px rgba(255, 255, 255, 0.9);
 }
 
+.goma-notifier {
+  position: fixed;
+  right: clamp(28px, 4.2vw, 72px);
+  bottom: clamp(58px, 6vw, 92px);
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 22px;
+  max-width: calc(100vw - 44px);
+  pointer-events: none;
+}
+
+.goma-speech,
+.goma-speech-placeholder {
+  min-height: 76px;
+}
+
+.goma-speech {
+  position: relative;
+  align-self: center;
+  margin-bottom: 52px;
+  justify-self: end;
+  width: fit-content;
+  min-width: 220px;
+  max-width: min(500px, calc(100vw - 250px));
+  border: 1px solid rgba(157, 104, 57, 0.32);
+  border-radius: 28px 24px 28px 24px;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.82), transparent 24%),
+    linear-gradient(135deg, rgba(46, 126, 82, 0.08) 0 16px, transparent 16px),
+    linear-gradient(180deg, #fff8e4 0%, #f7e8c6 100%);
+  color: #24170f;
+  padding: 17px 24px 18px;
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.75) inset,
+    0 10px 16px rgba(100, 68, 37, 0.1),
+    0 20px 30px rgba(100, 68, 37, 0.07);
+  font-family:
+    "Pretendard Variable",
+    "Pretendard Rounded",
+    Pretendard,
+    "SUIT Variable",
+    SUIT,
+    "Apple SD Gothic Neo",
+    "Noto Sans KR",
+    sans-serif;
+  font-size: clamp(1.16rem, 1.38vw, 1.34rem);
+  font-weight: 800;
+  line-height: 1.44;
+  letter-spacing: 0;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  animation: goma-speech-pop 220ms ease-out;
+}
+
+.goma-speech-stitch {
+  position: absolute;
+  inset: 7px;
+  border: 1px dashed rgba(157, 104, 57, 0.18);
+  border-radius: 22px 19px 22px 19px;
+  pointer-events: none;
+}
+
+.goma-speech-text {
+  position: relative;
+  z-index: 1;
+}
+
+.goma-speech::before {
+  position: absolute;
+  right: -16px;
+  bottom: 21px;
+  width: 0;
+  height: 0;
+  border-top: 12px solid transparent;
+  border-bottom: 12px solid transparent;
+  border-left: 18px solid rgba(157, 104, 57, 0.28);
+  content: "";
+  filter: drop-shadow(3px 4px 5px rgba(100, 68, 37, 0.05));
+}
+
+.goma-speech::after {
+  position: absolute;
+  right: -13px;
+  bottom: 23px;
+  width: 0;
+  height: 0;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  border-left: 14px solid #f7e8c6;
+  content: "";
+}
+
+.goma-speech-placeholder {
+  margin-bottom: 52px;
+}
+
+.goma-button {
+  display: grid;
+  align-self: end;
+  width: clamp(120px, 11.5vw, 150px);
+  height: clamp(120px, 11.5vw, 150px);
+  place-items: center;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0;
+  pointer-events: auto;
+}
+
+.goma-button:hover .goma-character,
+.goma-button:focus-visible .goma-character {
+  transform: translateY(-3px) rotate(-2deg);
+}
+
+.goma-button:focus-visible {
+  outline: 3px solid rgba(122, 86, 52, 0.35);
+  outline-offset: 4px;
+}
+
+.goma-character {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 13px 13px rgba(78, 53, 31, 0.18));
+  transition: transform 160ms ease;
+}
+
+@keyframes goma-speech-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .initial-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -275,6 +423,11 @@ h2 {
     border-color 160ms ease,
     transform 160ms ease,
     box-shadow 160ms ease;
+}
+
+.initial-card.filled {
+  border-width: 2px;
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .initial-card.empty {
@@ -305,9 +458,14 @@ h2 {
   text-align: left;
 }
 
+.initial-card-main:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
 .initial-letter {
   color: var(--ink);
-  font-size: clamp(2rem, 2.6vw, 2.55rem);
+  font-size: clamp(2.18rem, 2.8vw, 2.85rem);
   font-weight: 900;
   line-height: 1;
 }
@@ -331,14 +489,34 @@ h2 {
 
 .entry-content {
   display: grid;
-  gap: 10px;
+  gap: 14px;
   width: 100%;
   padding-right: 0;
 }
 
 .inline-card-editor {
+  position: relative;
   justify-content: start;
   gap: 14px;
+  padding-right: 70px;
+}
+
+.card-cancel-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--canvas);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--hairline), 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.card-cancel-button:hover {
+  background: var(--pink);
 }
 
 .card-input-form {
@@ -419,12 +597,13 @@ h2 {
 
 .word-line {
   display: flex;
-  min-height: 34px;
+  min-height: 38px;
   align-items: center;
   gap: 4px;
-  font-size: clamp(1.25rem, 1.7vw, 1.6rem);
-  font-weight: 900;
-  line-height: 1.1;
+  color: var(--ink);
+  font-size: clamp(1.42rem, 1.95vw, 1.9rem);
+  font-weight: 950;
+  line-height: 1.12;
   word-break: break-all;
 }
 
@@ -438,9 +617,9 @@ h2 {
   display: inline-flex;
   width: max-content;
   border-radius: 999px;
-  padding: 5px 10px;
+  padding: 6px 12px;
   color: var(--ink);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 900;
 }
 
@@ -452,6 +631,11 @@ h2 {
   border-radius: 999px;
   background: var(--lime);
   color: var(--ink);
+  padding: 0;
+}
+
+.delete-mark {
+  background: var(--pink);
 }
 
 .card-actions {
@@ -510,6 +694,10 @@ h2 {
   padding: 22px;
 }
 
+.teacher-shell .topic-editor {
+  width: min(1240px, 100%);
+}
+
 .topic-editor h2 {
   margin-bottom: 12px;
 }
@@ -530,6 +718,7 @@ h2 {
 
 .topic-form {
   align-items: center;
+  width: 100%;
 }
 
 .submit-row input,
@@ -549,6 +738,7 @@ h2 {
 }
 
 .topic-form input {
+  flex-basis: 820px;
   min-height: 60px;
   border-radius: 18px;
   font-size: 1.2rem;
@@ -661,7 +851,7 @@ h2 {
 }
 
 .teacher-shell {
-  width: min(1440px, 100%);
+  width: min(1680px, 100%);
 }
 
 .teacher-shell .app-header {
@@ -685,6 +875,12 @@ h2 {
   background: rgba(255, 255, 255, 0.86);
 }
 
+.teacher-board-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+
 .teacher-board-panel .initial-card {
   min-height: clamp(130px, 13vh, 162px);
 }
@@ -695,6 +891,11 @@ h2 {
 
 .teacher-board-panel .initial-letter {
   font-size: clamp(1.7rem, 2vw, 2.2rem);
+}
+
+.teacher-board-panel .word-line {
+  min-height: 32px;
+  font-size: clamp(1.2rem, 1.5vw, 1.52rem);
 }
 
 .status-list {
@@ -796,6 +997,7 @@ h2 {
 
   .student-shell {
     min-height: auto;
+    padding-bottom: 220px;
   }
 
   .teacher-layout {
@@ -815,6 +1017,10 @@ h2 {
   .app-shell,
   .center-page {
     padding: 18px;
+  }
+
+  .student-shell {
+    padding-bottom: 208px;
   }
 
   .select-panel,
@@ -854,6 +1060,63 @@ h2 {
   .board-panel {
     border-radius: 24px;
     padding: 14px;
+  }
+
+  .goma-notifier {
+    right: 14px;
+    bottom: 48px;
+    left: 14px;
+    grid-template-columns: minmax(0, 1fr) 84px;
+    gap: 14px;
+    max-width: none;
+  }
+
+  .goma-speech {
+    align-self: end;
+    margin-bottom: 34px;
+    justify-self: end;
+    width: fit-content;
+    min-width: 0;
+    max-width: 100%;
+    border-radius: 18px;
+    padding: 15px 16px;
+    font-size: 1.04rem;
+    font-weight: 800;
+    line-height: 1.42;
+  }
+
+  .goma-speech,
+  .goma-speech-placeholder {
+    min-height: 68px;
+  }
+
+  .goma-speech::before {
+    right: -13px;
+    bottom: 19px;
+    width: 0;
+    height: 0;
+    border-top-width: 11px;
+    border-bottom-width: 11px;
+    border-left-width: 16px;
+  }
+
+  .goma-speech::after {
+    right: -10px;
+    bottom: 21px;
+    width: 0;
+    height: 0;
+    border-top-width: 10px;
+    border-bottom-width: 10px;
+    border-left-width: 13px;
+  }
+
+  .goma-speech-placeholder {
+    margin-bottom: 34px;
+  }
+
+  .goma-button {
+    width: 84px;
+    height: 84px;
   }
 
   .card-input-form {

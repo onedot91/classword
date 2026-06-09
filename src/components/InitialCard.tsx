@@ -1,5 +1,5 @@
-import { Check, Pencil, Trash2, X } from 'lucide-react';
-import { FormEvent } from 'react';
+import { Check, Trash2, X } from 'lucide-react';
+import { FormEvent, KeyboardEvent } from 'react';
 import { getStudentColor } from '../lib/colors';
 import type { Entry, Initial } from '../types/app';
 import { StudentBadge } from './StudentBadge';
@@ -14,6 +14,7 @@ type InlineEditorProps = {
   onSubmit: () => void;
   onConfirm: () => void;
   onCancelConfirm: () => void;
+  onCancel: () => void;
 };
 
 type InitialCardProps = {
@@ -41,6 +42,7 @@ export function InitialCard({
 }: InitialCardProps) {
   const isFilled = Boolean(entry);
   const canSelect = Boolean(onSelect) && !disabled && (!entry || entry.id === editableEntryId);
+  const canDeleteEntry = Boolean(onDelete && entry?.id === editableEntryId);
   const style = entry ? { borderColor: getStudentColor(entry.student_number) } : undefined;
 
   function handleEditorSubmit(event: FormEvent<HTMLFormElement>) {
@@ -48,10 +50,28 @@ export function InitialCard({
     inlineEditor?.onSubmit();
   }
 
+  function handleCardKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (!canSelect || (event.key !== 'Enter' && event.key !== ' ')) {
+      return;
+    }
+
+    event.preventDefault();
+    onSelect?.(initial);
+  }
+
   return (
     <article className={`initial-card ${isFilled ? 'filled' : 'empty'} ${selected ? 'selected' : ''}`} style={style}>
       {selected && inlineEditor ? (
         <div className="initial-card-main inline-card-editor">
+          <button
+            type="button"
+            className="card-cancel-button"
+            onClick={inlineEditor.onCancel}
+            disabled={inlineEditor.isSubmitting}
+            aria-label="입력 취소"
+          >
+            <X size={18} />
+          </button>
           <span className="initial-letter">{initial}</span>
           {inlineEditor.pendingWord ? (
             <div className="card-confirm">
@@ -83,26 +103,47 @@ export function InitialCard({
           {inlineEditor.message ? <p className="card-message">{inlineEditor.message}</p> : null}
         </div>
       ) : (
-        <button type="button" className="initial-card-main" onClick={() => onSelect?.(initial)} disabled={!canSelect}>
-          <span className="initial-letter">{initial}</span>
-          {entry ? (
+        entry ? (
+          <div
+            className="initial-card-main"
+            role={canSelect ? 'button' : undefined}
+            tabIndex={canSelect ? 0 : undefined}
+            onClick={() => {
+              if (canSelect) {
+                onSelect?.(initial);
+              }
+            }}
+            onKeyDown={handleCardKeyDown}
+          >
+            <span className="initial-letter">{initial}</span>
             <span className="entry-content">
               <span className="word-line">{entry.word}</span>
               <span className="entry-meta">
                 <StudentBadge studentNumber={entry.student_number} />
-                {canSelect ? (
-                  <span className="edit-mark" aria-hidden="true">
-                    <Pencil size={16} />
-                  </span>
+                {canDeleteEntry ? (
+                  <button
+                    type="button"
+                    className="edit-mark delete-mark"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDelete?.(entry.id);
+                    }}
+                    aria-label="삭제"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 ) : null}
               </span>
             </span>
-          ) : (
+          </div>
+        ) : (
+          <button type="button" className="initial-card-main" onClick={() => onSelect?.(initial)} disabled={!canSelect}>
+            <span className="initial-letter">{initial}</span>
             <span className="empty-mark" aria-hidden="true">
               +
             </span>
-          )}
-        </button>
+          </button>
+        )
       )}
 
       {teacherMode && entry ? (

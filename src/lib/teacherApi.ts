@@ -51,3 +51,7 @@ export async function updateTopic(token: string, date: string, topic: string): P
 export async function deleteEntry(token: string, entryId: string): Promise<TeacherActionResponse<{ id: string }>> {
   return callTeacherAction<{ id: string }>('deleteEntry', { token, entryId });
 }
+
+export async function deleteEntriesByDate(token: string, date: string): Promise<TeacherActionResponse<{ date: string }>> {
+  return callTeacherAction<{ date: string }>('deleteEntriesByDate', { token, date });
+}
