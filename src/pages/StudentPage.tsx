@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RotateCcw } from 'lucide-react';
 import { ConfettiComplete } from '../components/ConfettiComplete';
 import { GomaNotifier } from '../components/GomaNotifier';
 import { InitialGrid } from '../components/InitialGrid';
@@ -8,7 +7,9 @@ import { getTodayDateKey } from '../lib/date';
 import { INITIALS } from '../lib/initials';
 import { deleteLocalEntry, getLocalEntries, getLocalRound, insertLocalEntry, updateLocalEntry } from '../lib/localData';
 import { useRealtimeBoard } from '../lib/realtime';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { playSound } from '../lib/sound';
+import { deleteStudentEntry, submitStudentEntry } from '../lib/studentApi';
+import { shouldUseLocalData, supabase } from '../lib/supabase';
 import { validateWord } from '../lib/validation';
 import type { Entry, Initial, Round, StudentNumber } from '../types/app';
 
@@ -24,6 +25,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
   const [selectedInitial, setSelectedInitial] = useState<Initial | null>(null);
   const [draftWord, setDraftWord] = useState('');
   const [pendingWord, setPendingWord] = useState('');
+  const [celebrationInitial, setCelebrationInitial] = useState<Initial | null>(null);
   const [submitMessage, setSubmitMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,7 +34,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
   const fetchBoard = useCallback(async () => {
     setLoadError('');
 
-    if (!isSupabaseConfigured) {
+    if (shouldUseLocalData()) {
       setRound(getLocalRound(todayDate));
       setEntries(getLocalEntries(todayDate));
       setIsLoading(false);
@@ -63,7 +65,30 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
     void fetchBoard();
   }, [fetchBoard]);
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Enter' || !event.altKey || !event.metaKey || event.repeat) {
+        return;
+      }
+
+      event.preventDefault();
+      onChangeNumber();
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onChangeNumber]);
+
   useRealtimeBoard({ date: todayDate, onChange: fetchBoard });
+
+  useEffect(() => {
+    if (!celebrationInitial) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setCelebrationInitial(null), 900);
+    return () => window.clearTimeout(timeout);
+  }, [celebrationInitial]);
 
   const submittedEntry = entries.find((entry) => entry.student_number === studentNumber);
   const completedCount = entries.length;
@@ -72,6 +97,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
 
   function handleSelectInitial(initial: Initial) {
     const selectedEntry = entries.find((entry) => entry.initial === initial);
+    playSound(selectedEntry && selectedEntry.id === submittedEntry?.id ? 'open' : 'select');
     setSelectedInitial(initial);
     setPendingWord('');
     setSubmitMessage('');
@@ -84,6 +110,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
     }
 
     setSubmitMessage('');
+    playSound('confirm');
     setPendingWord(draftWord.trim());
   }
 
@@ -108,7 +135,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
       return validation.message;
     }
 
-    if (!isSupabaseConfigured) {
+    if (shouldUseLocalData()) {
       try {
         if (submittedEntry) {
           updateLocalEntry(submittedEntry.id, initial, validation.word);
@@ -124,26 +151,9 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
       return null;
     }
 
-    const { error } = submittedEntry
-      ? await supabase
-          .from('entries')
-          .update({
-            initial,
-            word: validation.word,
-          })
-          .eq('id', submittedEntry.id)
-      : await supabase.from('entries').insert({
-          round_date: todayDate,
-          initial,
-          word: validation.word,
-          student_number: studentNumber,
-        });
-
-    if (error) {
-      if (error.code === '23505') {
-        return submittedEntry ? '이미 채워진 칸이에요.' : '오늘은 한 번만 제출할 수 있어요.';
-      }
-      return error.message;
+    const result = await submitStudentEntry(todayDate, initial, validation.word, studentNumber, submittedEntry?.id);
+    if (result.error) {
+      return result.error;
     }
 
     setSelectedInitial(null);
@@ -162,11 +172,14 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
     setIsSubmitting(false);
 
     if (error) {
+      playSound('error');
       setSubmitMessage(error);
       setPendingWord('');
       return;
     }
 
+    playSound('success');
+    setCelebrationInitial(selectedInitial);
     setDraftWord('');
     setPendingWord('');
   }
@@ -179,7 +192,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
     setIsSubmitting(true);
     setSubmitMessage('');
 
-    if (!isSupabaseConfigured) {
+    if (shouldUseLocalData()) {
       deleteLocalEntry(submittedEntry.id);
       setSelectedInitial(null);
       setDraftWord('');
@@ -189,11 +202,11 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
       return;
     }
 
-    const { error } = await supabase.from('entries').delete().eq('id', submittedEntry.id).eq('student_number', studentNumber);
+    const result = await deleteStudentEntry(submittedEntry.id, studentNumber);
     setIsSubmitting(false);
 
-    if (error) {
-      setSubmitMessage(error.message);
+    if (result.error) {
+      setSubmitMessage(result.error);
       return;
     }
 
@@ -207,17 +220,13 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
     <main className="app-shell student-shell">
       <header className="app-header">
         <div>
-          <div className="student-header-badge">
+          <div className="student-header-meta">
             <StudentBadge studentNumber={studentNumber} />
           </div>
           <h1 className="topic-sentence">
             오늘의 주제는 <span className="topic-word">{round?.topic || '미정'}</span> 입니다.
           </h1>
         </div>
-        <button type="button" className="secondary-button" onClick={onChangeNumber}>
-          <RotateCcw size={18} />
-          번호 변경
-        </button>
       </header>
 
       <ConfettiComplete complete={complete} />
@@ -242,6 +251,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
             onCancelConfirm: () => setPendingWord(''),
             onCancel: handleCancelSelection,
           }}
+          celebrationInitial={celebrationInitial}
           onSelect={handleSelectInitial}
           onDelete={submittedEntry ? handleDeleteSubmittedEntry : undefined}
         />

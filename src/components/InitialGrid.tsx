@@ -5,6 +5,7 @@ import { InitialCard } from './InitialCard';
 type InitialGridProps = {
   entries: Entry[];
   selectedInitial?: Initial | null;
+  celebrationInitial?: Initial | null;
   disabled?: boolean;
   editableEntryId?: string;
   inlineEditor?: {
@@ -27,6 +28,7 @@ type InitialGridProps = {
 export function InitialGrid({
   entries,
   selectedInitial,
+  celebrationInitial,
   disabled,
   editableEntryId,
   inlineEditor,
@@ -44,6 +46,7 @@ export function InitialGrid({
           initial={initial}
           entry={entriesByInitial.get(initial)}
           selected={selectedInitial === initial}
+          celebrating={celebrationInitial === initial}
           disabled={disabled}
           editableEntryId={editableEntryId}
           inlineEditor={selectedInitial === initial ? inlineEditor : undefined}

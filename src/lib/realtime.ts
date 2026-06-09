@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { LOCAL_BOARD_EVENT } from './localData';
-import { isSupabaseConfigured, supabase } from './supabase';
+import { shouldUseLocalData, supabase } from './supabase';
 
 type RealtimeBoardOptions = {
   date: string;
@@ -15,7 +15,7 @@ export function useRealtimeBoard({ date, onChange }: RealtimeBoardOptions): void
 
     window.addEventListener(LOCAL_BOARD_EVENT, onChange);
 
-    if (!isSupabaseConfigured) {
+    if (shouldUseLocalData()) {
       return () => {
         window.removeEventListener(LOCAL_BOARD_EVENT, onChange);
       };

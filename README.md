@@ -5,7 +5,7 @@
 ## 주요 기능
 
 - 학생 번호 1~23 선택, localStorage 저장
-- 교사 번호 0 선택 후 비밀번호 로그인
+- 숨겨진 교사 번호 0 선택 후 바로 입장
 - 오늘의 주제와 14개 초성 카드 표시
 - 학생 하루 1회 제출 제한
 - 단어 첫 글자 초성과 선택 초성 일치 검증
@@ -53,10 +53,8 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 ```bash
 supabase functions deploy teacher-actions
-supabase secrets set TEACHER_PASSWORD=0901
+supabase functions deploy student-actions
 ```
-
-운영에서는 `0901`을 필요한 비밀번호로 바꾸세요.
 
 ## 데이터베이스
 
@@ -83,7 +81,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 4. Build Command는 `npm run build`, Output Directory는 `dist`를 사용합니다.
-5. 교사 비밀번호는 Vercel이 아니라 Supabase Edge Function secret으로 관리합니다.
+5. 교사용 화면은 숨겨진 0번 선택으로 입장합니다.
 
 ## 향후 확장 아이디어
 

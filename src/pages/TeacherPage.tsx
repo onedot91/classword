@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TeacherDashboard } from '../components/TeacherDashboard';
-import { TeacherLogin } from '../components/TeacherLogin';
 import { getTodayDateKey } from '../lib/date';
 import { deleteLocalEntriesByDate, deleteLocalEntry, getLocalEntries, getLocalRound, getLocalRounds, upsertLocalRound } from '../lib/localData';
 import { useRealtimeBoard } from '../lib/realtime';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { shouldUseLocalData, supabase } from '../lib/supabase';
 import {
   clearTeacherToken,
   deleteEntriesByDate,
@@ -28,11 +27,13 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
   const [savedTopics, setSavedTopics] = useState<string[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loadError, setLoadError] = useState('');
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [hasTriedSession, setHasTriedSession] = useState(false);
 
   const fetchBoard = useCallback(async () => {
     setLoadError('');
 
-    if (!isSupabaseConfigured) {
+    if (shouldUseLocalData()) {
       setRound(getLocalRound(selectedDate));
       setSavedTopics(getLocalRounds().map((localRound) => localRound.topic));
       setEntries(getLocalEntries(selectedDate));
@@ -70,18 +71,45 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     }
   }, [fetchBoard, token]);
 
-  useRealtimeBoard({ date: selectedDate, onChange: fetchBoard });
-
-  async function handleLogin(password: string): Promise<string | null> {
-    const result = await loginTeacher(password);
-    if (result.error || !result.data) {
-      return result.error ?? '로그인할 수 없습니다.';
+  useEffect(() => {
+    if (token || isCreatingSession || hasTriedSession) {
+      return;
     }
 
-    saveTeacherToken(result.data.token);
-    setToken(result.data.token);
-    return null;
-  }
+    async function createSession() {
+      setHasTriedSession(true);
+      setIsCreatingSession(true);
+      setLoadError('');
+      const result = await loginTeacher();
+      setIsCreatingSession(false);
+
+      if (result.error || !result.data) {
+        setLoadError(result.error ?? '교사용 화면으로 들어갈 수 없습니다.');
+        return;
+      }
+
+      saveTeacherToken(result.data.token);
+      setToken(result.data.token);
+    }
+
+    void createSession();
+  }, [hasTriedSession, isCreatingSession, token]);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Enter' || !event.altKey || !event.metaKey || event.repeat) {
+        return;
+      }
+
+      event.preventDefault();
+      onChangeNumber();
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onChangeNumber]);
+
+  useRealtimeBoard({ date: selectedDate, onChange: fetchBoard });
 
   function handleLogout() {
     clearTeacherToken();
@@ -94,7 +122,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
       return '다시 로그인해 주세요.';
     }
 
-    if (!isSupabaseConfigured) {
+    if (shouldUseLocalData()) {
       upsertLocalRound(todayDate, topic);
       await fetchBoard();
       return null;
@@ -114,7 +142,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
       return;
     }
 
-    if (!isSupabaseConfigured) {
+    if (shouldUseLocalData()) {
       deleteLocalEntry(entryId);
       await fetchBoard();
       return;
@@ -130,11 +158,11 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
   }
 
   async function handleDeleteAllEntries() {
-    if (!token || entries.length === 0 || !window.confirm('1~23번 제출을 모두 삭제할까요?')) {
+    if (!token || entries.length === 0) {
       return;
     }
 
-    if (!isSupabaseConfigured) {
+    if (shouldUseLocalData()) {
       deleteLocalEntriesByDate(selectedDate);
       await fetchBoard();
       return;
@@ -150,7 +178,18 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
   }
 
   if (!token) {
-    return <TeacherLogin onLogin={handleLogin} onBack={onChangeNumber} />;
+    return (
+      <main className="center-page">
+        <section className="login-panel">
+          <div className="page-kicker">교사용</div>
+          <h1>들어가는 중</h1>
+          {loadError ? <p className="form-message">{loadError}</p> : <p className="form-message">교사용 화면을 준비하고 있어요.</p>}
+          <button type="button" className="text-button" onClick={onChangeNumber}>
+            번호 다시 선택
+          </button>
+        </section>
+      </main>
+    );
   }
 
   return (

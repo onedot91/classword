@@ -1,5 +1,5 @@
 import { Check, Trash2, X } from 'lucide-react';
-import { FormEvent, KeyboardEvent } from 'react';
+import { FormEvent, KeyboardEvent, useEffect } from 'react';
 import { getStudentColor } from '../lib/colors';
 import type { Entry, Initial } from '../types/app';
 import { StudentBadge } from './StudentBadge';
@@ -21,6 +21,7 @@ type InitialCardProps = {
   initial: Initial;
   entry?: Entry;
   selected?: boolean;
+  celebrating?: boolean;
   disabled?: boolean;
   editableEntryId?: string;
   teacherMode?: boolean;
@@ -33,6 +34,7 @@ export function InitialCard({
   initial,
   entry,
   selected,
+  celebrating,
   disabled,
   editableEntryId,
   teacherMode,
@@ -44,6 +46,35 @@ export function InitialCard({
   const canSelect = Boolean(onSelect) && !disabled && (!entry || entry.id === editableEntryId);
   const canDeleteEntry = Boolean(onDelete && entry?.id === editableEntryId);
   const style = entry ? { borderColor: getStudentColor(entry.student_number) } : undefined;
+
+  useEffect(() => {
+    if (!selected || !inlineEditor?.pendingWord) {
+      return undefined;
+    }
+
+    function handleWindowKeyDown(event: globalThis.KeyboardEvent) {
+      if (!inlineEditor || inlineEditor.isSubmitting || event.repeat) {
+        return;
+      }
+
+      if (event.target instanceof HTMLElement && event.target.closest('button')) {
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        inlineEditor.onConfirm();
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        inlineEditor.onCancelConfirm();
+      }
+    }
+
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, [inlineEditor, selected]);
 
   function handleEditorSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,18 +91,20 @@ export function InitialCard({
   }
 
   return (
-    <article className={`initial-card ${isFilled ? 'filled' : 'empty'} ${selected ? 'selected' : ''}`} style={style}>
+    <article className={`initial-card ${isFilled ? 'filled' : 'empty'} ${selected ? 'selected' : ''} ${celebrating ? 'celebrating' : ''}`} style={style}>
       {selected && inlineEditor ? (
-        <div className="initial-card-main inline-card-editor">
-          <button
-            type="button"
-            className="card-cancel-button"
-            onClick={inlineEditor.onCancel}
-            disabled={inlineEditor.isSubmitting}
-            aria-label="입력 취소"
-          >
-            <X size={18} />
-          </button>
+        <div className={`initial-card-main inline-card-editor ${inlineEditor.pendingWord ? 'confirming' : ''}`}>
+          {!inlineEditor.pendingWord ? (
+            <button
+              type="button"
+              className="card-cancel-button"
+              onClick={inlineEditor.onCancel}
+              disabled={inlineEditor.isSubmitting}
+              aria-label="입력 취소"
+            >
+              <X size={18} />
+            </button>
+          ) : null}
           <span className="initial-letter">{initial}</span>
           {inlineEditor.pendingWord ? (
             <div className="card-confirm">

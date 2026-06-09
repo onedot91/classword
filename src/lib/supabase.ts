@@ -9,6 +9,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+const LOCAL_DATA_FALLBACK_KEY = 'classword_use_local_data_fallback';
+
+export function enableLocalDataFallback(): void {
+  sessionStorage.setItem(LOCAL_DATA_FALLBACK_KEY, 'true');
+}
+
+export function shouldUseLocalData(): boolean {
+  return !isSupabaseConfigured || sessionStorage.getItem(LOCAL_DATA_FALLBACK_KEY) === 'true';
+}
 
 export const supabase = createClient<Database>(
   supabaseUrl ?? 'https://placeholder.supabase.co',

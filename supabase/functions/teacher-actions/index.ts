@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 
 type TeacherAction =
-  | { action: 'login'; password: string }
+  | { action: 'login' }
   | { action: 'updateTopic'; token: string; date: string; topic: string }
   | { action: 'deleteEntry'; token: string; entryId: string }
   | { action: 'deleteEntriesByDate'; token: string; date: string };
@@ -28,7 +28,6 @@ function requireEnv(name: string): string {
 
 const supabaseUrl = requireEnv('SUPABASE_URL');
 const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
-const teacherPassword = Deno.env.get('TEACHER_PASSWORD') ?? '0901';
 
 const supabase = createClient(supabaseUrl, serviceRoleKey);
 
@@ -52,10 +51,6 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as TeacherAction;
 
     if (body.action === 'login') {
-      if (body.password !== teacherPassword) {
-        return jsonResponse({ error: '비밀번호가 맞지 않습니다.' }, 401);
-      }
-
       const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('teacher_sessions')

@@ -114,36 +114,11 @@ to anon
 using (true);
 
 drop policy if exists "students can insert entries" on public.entries;
-create policy "students can insert entries"
-on public.entries
-for insert
-to anon
-with check (
-  student_number between 1 and 23
-  and initial in ('ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ')
-  and length(trim(word)) > 0
-  and char_length(trim(word)) between 1 and 6
-);
-
 drop policy if exists "students can update entries" on public.entries;
-create policy "students can update entries"
-on public.entries
-for update
-to anon
-using (student_number between 1 and 23)
-with check (
-  student_number between 1 and 23
-  and initial in ('ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ')
-  and length(trim(word)) > 0
-  and char_length(trim(word)) between 1 and 6
-);
-
 drop policy if exists "students can delete entries" on public.entries;
-create policy "students can delete entries"
-on public.entries
-for delete
-to anon
-using (student_number between 1 and 23);
+
+-- Writes are handled by Supabase Edge Functions with the service role key.
+-- Keeping anon writes closed prevents clients from editing other students' entries directly.
 
 do $$
 begin
