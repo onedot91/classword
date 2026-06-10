@@ -36,6 +36,7 @@ export function TeacherDashboard({
 }: TeacherDashboardProps) {
   const isToday = selectedDate === todayDate;
   const [deleteConfirmStep, setDeleteConfirmStep] = useState<0 | 1 | 2>(0);
+  const topicLabel = isToday ? '오늘의 주제' : `${selectedDate} 주제`;
 
   function closeDeleteConfirm() {
     setDeleteConfirmStep(0);
@@ -54,7 +55,7 @@ export function TeacherDashboard({
             <div className="page-kicker">교사용</div>
           </div>
           <h1 className="topic-sentence">
-            오늘의 주제는 <span className="topic-word">{round?.topic || '미정'}</span> 입니다.
+            {topicLabel}는 <span className="topic-word">{round?.topic || '미정'}</span> 입니다.
           </h1>
         </div>
         <button type="button" className="secondary-button header-action" onClick={onLogout}>
@@ -65,7 +66,7 @@ export function TeacherDashboard({
 
       <ConfettiComplete complete={completedCount === INITIALS.length} />
 
-      {isToday ? <TopicEditor topic={round?.topic ?? ''} savedTopics={savedTopics} onSave={onTopicSave} /> : null}
+      <TopicEditor label={topicLabel} topic={round?.topic ?? ''} savedTopics={savedTopics} onSave={onTopicSave} />
 
       <div className="teacher-layout">
         <section className="board-panel teacher-board-panel">

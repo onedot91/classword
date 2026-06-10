@@ -125,6 +125,7 @@ const RANDOM_TOPICS = [
 ];
 
 type TopicEditorProps = {
+  label?: string;
   topic: string;
   savedTopics: string[];
   onSave: (topic: string) => Promise<string | null>;
@@ -134,7 +135,7 @@ function normalizeTopic(topic: string): string {
   return topic.trim();
 }
 
-export function TopicEditor({ topic, savedTopics, onSave }: TopicEditorProps) {
+export function TopicEditor({ label = '오늘의 주제', topic, savedTopics, onSave }: TopicEditorProps) {
   const [draft, setDraft] = useState(topic);
   const [message, setMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -172,10 +173,10 @@ export function TopicEditor({ topic, savedTopics, onSave }: TopicEditorProps) {
 
   return (
     <section className="teacher-section topic-editor">
-      <h2>오늘의 주제</h2>
+      <h2>{label}</h2>
       <form onSubmit={handleSubmit} className="topic-form">
         <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="주제 입력" />
-        <button type="submit" disabled={isSaving || !draft.trim()}>
+        <button type="submit" disabled={isSaving}>
           <Save size={18} />
           저장
         </button>

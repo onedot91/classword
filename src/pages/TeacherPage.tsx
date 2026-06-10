@@ -125,12 +125,12 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     }
 
     if (shouldUseLocalData()) {
-      upsertLocalRound(todayDate, topic);
+      upsertLocalRound(selectedDate, topic);
       await fetchBoard();
       return null;
     }
 
-    const result = await updateTopic(token, todayDate, topic);
+    const result = await updateTopic(token, selectedDate, topic);
     if (result.error) {
       return result.error;
     }
