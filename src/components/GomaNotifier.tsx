@@ -146,7 +146,7 @@ export function GomaNotifier({
   }
 
   return (
-    <aside className="goma-notifier" aria-label="고마 알림">
+    <aside className={`goma-notifier ${selectedInitial ? 'has-selection' : ''}`} aria-label="고마 알림">
       {isSpeechVisible ? (
         <div className="goma-speech" role="status" aria-live="polite">
           <i className="goma-speech-stitch" aria-hidden="true" />

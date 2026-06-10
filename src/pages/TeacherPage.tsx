@@ -97,7 +97,9 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key !== 'Enter' || !event.altKey || !event.metaKey || event.repeat) {
+      const isChangeNumberShortcut = event.altKey && (event.ctrlKey || event.metaKey);
+
+      if (event.key !== 'Enter' || !isChangeNumberShortcut || event.repeat) {
         return;
       }
 

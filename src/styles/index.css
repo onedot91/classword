@@ -1586,6 +1586,13 @@ h2 {
   }
 }
 
+@media (min-width: 621px) and (max-height: 820px) {
+  .goma-notifier.has-selection .goma-speech,
+  .goma-notifier.has-selection .goma-speech-placeholder {
+    display: none;
+  }
+}
+
 @media (max-width: 620px) {
   .app-shell,
   .center-page {
