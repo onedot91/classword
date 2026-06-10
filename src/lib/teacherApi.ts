@@ -108,6 +108,10 @@ export async function loginTeacher(): Promise<TeacherActionResponse<TeacherSessi
     return createLocalTeacherSession();
   }
 
+  if (isSupabaseConfigured) {
+    return createLocalTeacherSession();
+  }
+
   const result = await callTeacherAction<TeacherSession>('login', {});
   if (result.error && shouldFallbackToLocalData(result.error)) {
     enableLocalDataFallback();
