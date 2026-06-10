@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, MouseEvent, PointerEvent } from 'react';
 import type { Entry, Initial } from '../types/app';
+
+const GOMA_VIEWPORT_PADDING = 12;
+const DRAG_THRESHOLD = 4;
 
 type GomaNotifierProps = {
   remainingCount: number;
@@ -10,6 +14,42 @@ type GomaNotifierProps = {
   loadError?: string;
   complete?: boolean;
 };
+
+type GomaPosition = {
+  x: number;
+  y: number;
+};
+
+type DragState = {
+  pointerId: number;
+  offsetX: number;
+  offsetY: number;
+  startX: number;
+  startY: number;
+  moved: boolean;
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function clampPosition(position: GomaPosition, element?: HTMLElement | null, dragHandle?: HTMLElement | null): GomaPosition {
+  const elementRect = element?.getBoundingClientRect();
+  const handleRect = dragHandle?.getBoundingClientRect();
+  const handleOffsetX = elementRect && handleRect ? handleRect.left - elementRect.left : 0;
+  const handleOffsetY = elementRect && handleRect ? handleRect.top - elementRect.top : 0;
+  const width = handleRect?.width ?? element?.offsetWidth ?? 0;
+  const height = handleRect?.height ?? element?.offsetHeight ?? 0;
+  const minX = GOMA_VIEWPORT_PADDING - handleOffsetX;
+  const minY = GOMA_VIEWPORT_PADDING - handleOffsetY;
+  const maxX = Math.max(minX, window.innerWidth - handleOffsetX - width - GOMA_VIEWPORT_PADDING);
+  const maxY = Math.max(minY, window.innerHeight - handleOffsetY - height - GOMA_VIEWPORT_PADDING);
+
+  return {
+    x: clamp(position.x, minX, maxX),
+    y: clamp(position.y, minY, maxY),
+  };
+}
 
 export function GomaNotifier({
   remainingCount,
@@ -114,6 +154,12 @@ export function GomaNotifier({
 
   const [messageIndex, setMessageIndex] = useState(0);
   const [isSpeechVisible, setIsSpeechVisible] = useState(true);
+  const [position, setPosition] = useState<GomaPosition | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const notifierRef = useRef<HTMLElement | null>(null);
+  const gomaButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dragStateRef = useRef<DragState | null>(null);
+  const suppressClickRef = useRef(false);
 
   useEffect(() => {
     setMessageIndex(0);
@@ -138,15 +184,115 @@ export function GomaNotifier({
     };
   }, [messageIndex, messages]);
 
-  function handleGomaClick() {
+  useEffect(() => {
+    function handleResize() {
+      setPosition((currentPosition) => {
+        if (!currentPosition) {
+          return currentPosition;
+        }
+
+        return clampPosition(currentPosition, notifierRef.current, gomaButtonRef.current);
+      });
+    }
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  function handleGomaPointerDown(event: PointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const notifier = notifierRef.current;
+
+    if (!notifier) {
+      return;
+    }
+
+    const rect = notifier.getBoundingClientRect();
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+    };
+    setPosition({ x: rect.left, y: rect.top });
+    setIsDragging(true);
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleGomaPointerMove(event: PointerEvent<HTMLButtonElement>) {
+    const dragState = dragStateRef.current;
+
+    if (!dragState || dragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const distanceX = Math.abs(event.clientX - dragState.startX);
+    const distanceY = Math.abs(event.clientY - dragState.startY);
+
+    if (distanceX > DRAG_THRESHOLD || distanceY > DRAG_THRESHOLD) {
+      dragState.moved = true;
+    }
+
+    setPosition(clampPosition({
+      x: event.clientX - dragState.offsetX,
+      y: event.clientY - dragState.offsetY,
+    }, notifierRef.current, gomaButtonRef.current));
+  }
+
+  function finishGomaDrag(event: PointerEvent<HTMLButtonElement>) {
+    const dragState = dragStateRef.current;
+
+    if (!dragState || dragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (dragState.moved) {
+      suppressClickRef.current = true;
+      setPosition((currentPosition) => {
+        const nextPosition = currentPosition ? clampPosition(currentPosition, notifierRef.current, gomaButtonRef.current) : currentPosition;
+
+        return nextPosition;
+      });
+    }
+
+    dragStateRef.current = null;
+    setIsDragging(false);
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  function handleGomaClick(event: MouseEvent<HTMLButtonElement>) {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      event.preventDefault();
+      return;
+    }
+
     if (messages.length > 1) {
       setMessageIndex((currentIndex) => (currentIndex + 1) % messages.length);
     }
     setIsSpeechVisible(true);
   }
 
+  const notifierStyle: CSSProperties | undefined = position
+    ? {
+        left: position.x,
+        top: position.y,
+        right: 'auto',
+        bottom: 'auto',
+      }
+    : undefined;
+
   return (
-    <aside className={`goma-notifier ${selectedInitial ? 'has-selection' : ''}`} aria-label="고마 알림">
+    <aside ref={notifierRef} className={`goma-notifier ${isDragging ? 'dragging' : ''}`} style={notifierStyle} aria-label="고마 알림">
       {isSpeechVisible ? (
         <div className="goma-speech" role="status" aria-live="polite">
           <i className="goma-speech-stitch" aria-hidden="true" />
@@ -155,7 +301,17 @@ export function GomaNotifier({
       ) : (
         <div className="goma-speech-placeholder" aria-hidden="true" />
       )}
-      <button type="button" className="goma-button" onClick={handleGomaClick} aria-label="고마에게 말 걸기">
+      <button
+        ref={gomaButtonRef}
+        type="button"
+        className="goma-button"
+        onPointerDown={handleGomaPointerDown}
+        onPointerMove={handleGomaPointerMove}
+        onPointerUp={finishGomaDrag}
+        onPointerCancel={finishGomaDrag}
+        onClick={handleGomaClick}
+        aria-label="고마에게 말 걸기"
+      >
         <img className="goma-character" src="/goma-character.png" alt="" />
       </button>
     </aside>
