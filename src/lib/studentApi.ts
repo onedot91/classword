@@ -1,9 +1,13 @@
 import type { Entry, Initial, StudentNumber, TeacherActionResponse } from '../types/app';
 import { deleteLocalEntry, insertLocalEntry, updateLocalEntry } from './localData';
-import { enableLocalDataFallback, supabase } from './supabase';
+import { enableLocalDataFallback, isSupabaseConfigured, supabase } from './supabase';
 
 function isFunctionMissingMessage(message: string): boolean {
   return message.includes('Requested function was not found') || message.includes('Failed to send a request to the Edge Function');
+}
+
+function getBackendRequiredError(error: string): string {
+  return `${error} Supabase 테이블 쓰기 정책이나 Edge Function 배포를 확인해 주세요.`;
 }
 
 async function getFunctionErrorMessage(error: unknown): Promise<string> {
@@ -34,6 +38,34 @@ async function callStudentAction<T>(action: string, payload: Record<string, unkn
   return data ?? { error: '응답이 없습니다.' };
 }
 
+async function submitStudentEntryDirectly(
+  date: string,
+  initial: Initial,
+  word: string,
+  studentNumber: StudentNumber,
+  entryId?: string,
+): Promise<TeacherActionResponse<Entry>> {
+  const query = entryId
+    ? supabase.from('entries').update({ initial, word }).eq('id', entryId).eq('student_number', studentNumber)
+    : supabase.from('entries').insert({ round_date: date, initial, word, student_number: studentNumber });
+
+  const { data, error } = await query.select('*').single();
+  if (error) {
+    return { error: getBackendRequiredError(error.message) };
+  }
+
+  return { data: data as Entry };
+}
+
+async function deleteStudentEntryDirectly(entryId: string, studentNumber: StudentNumber): Promise<TeacherActionResponse<{ id: string }>> {
+  const { error } = await supabase.from('entries').delete().eq('id', entryId).eq('student_number', studentNumber);
+  if (error) {
+    return { error: getBackendRequiredError(error.message) };
+  }
+
+  return { data: { id: entryId } };
+}
+
 export async function submitStudentEntry(
   date: string,
   initial: Initial,
@@ -44,6 +76,10 @@ export async function submitStudentEntry(
   const result = await callStudentAction<Entry>('submitEntry', { date, initial, word, studentNumber, entryId });
   if (!result.error || !isFunctionMissingMessage(result.error)) {
     return result;
+  }
+
+  if (isSupabaseConfigured) {
+    return submitStudentEntryDirectly(date, initial, word, studentNumber, entryId);
   }
 
   enableLocalDataFallback();
@@ -59,6 +95,10 @@ export async function deleteStudentEntry(entryId: string, studentNumber: Student
   const result = await callStudentAction<{ id: string }>('deleteEntry', { entryId, studentNumber });
   if (!result.error || !isFunctionMissingMessage(result.error)) {
     return result;
+  }
+
+  if (isSupabaseConfigured) {
+    return deleteStudentEntryDirectly(entryId, studentNumber);
   }
 
   enableLocalDataFallback();

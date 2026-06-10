@@ -106,6 +106,21 @@ for select
 to anon
 using (true);
 
+drop policy if exists "rounds can be saved from app" on public.rounds;
+create policy "rounds can be saved from app"
+on public.rounds
+for insert
+to anon
+with check (true);
+
+drop policy if exists "rounds can be updated from app" on public.rounds;
+create policy "rounds can be updated from app"
+on public.rounds
+for update
+to anon
+using (true)
+with check (true);
+
 drop policy if exists "entries are readable" on public.entries;
 create policy "entries are readable"
 on public.entries
@@ -114,11 +129,29 @@ to anon
 using (true);
 
 drop policy if exists "students can insert entries" on public.entries;
-drop policy if exists "students can update entries" on public.entries;
-drop policy if exists "students can delete entries" on public.entries;
+create policy "students can insert entries"
+on public.entries
+for insert
+to anon
+with check (true);
 
--- Writes are handled by Supabase Edge Functions with the service role key.
--- Keeping anon writes closed prevents clients from editing other students' entries directly.
+drop policy if exists "students can update entries" on public.entries;
+create policy "students can update entries"
+on public.entries
+for update
+to anon
+using (true)
+with check (true);
+
+drop policy if exists "students can delete entries" on public.entries;
+create policy "students can delete entries"
+on public.entries
+for delete
+to anon
+using (true);
+
+-- Edge Functions are preferred when deployed. These anon write policies keep the app
+-- shared across desktops when the functions are not available.
 
 do $$
 begin

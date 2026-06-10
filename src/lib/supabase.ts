@@ -12,11 +12,21 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 const LOCAL_DATA_FALLBACK_KEY = 'classword_use_local_data_fallback';
 
 export function enableLocalDataFallback(): void {
+  if (isSupabaseConfigured) {
+    sessionStorage.removeItem(LOCAL_DATA_FALLBACK_KEY);
+    return;
+  }
+
   sessionStorage.setItem(LOCAL_DATA_FALLBACK_KEY, 'true');
 }
 
 export function shouldUseLocalData(): boolean {
-  return !isSupabaseConfigured || sessionStorage.getItem(LOCAL_DATA_FALLBACK_KEY) === 'true';
+  if (isSupabaseConfigured) {
+    sessionStorage.removeItem(LOCAL_DATA_FALLBACK_KEY);
+    return false;
+  }
+
+  return sessionStorage.getItem(LOCAL_DATA_FALLBACK_KEY) === 'true' || !isSupabaseConfigured;
 }
 
 export const supabase = createClient<Database>(

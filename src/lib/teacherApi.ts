@@ -7,7 +7,7 @@ const TEACHER_TOKEN_KEY = 'classword_teacher_token';
 function createLocalTeacherSession(): TeacherActionResponse<TeacherSession> {
   return {
     data: {
-      token: `local-${Date.now()}`,
+      token: `${isSupabaseConfigured ? 'shared' : 'local'}-${Date.now()}`,
       expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
     },
   };
@@ -22,7 +22,39 @@ function shouldFallbackToLocalData(error: string): boolean {
 }
 
 function getBackendRequiredError(error: string): string {
-  return `${error} 교사용 기능을 공유하려면 Supabase Edge Function을 배포해야 합니다.`;
+  return `${error} Supabase 테이블 쓰기 정책이나 Edge Function 배포를 확인해 주세요.`;
+}
+
+async function upsertTopicDirectly(date: string, topic: string): Promise<TeacherActionResponse<Round>> {
+  const { data, error } = await supabase
+    .from('rounds')
+    .upsert({ round_date: date, topic: topic.trim() }, { onConflict: 'round_date' })
+    .select('*')
+    .single();
+
+  if (error) {
+    return { error: getBackendRequiredError(error.message) };
+  }
+
+  return { data: data as Round };
+}
+
+async function deleteEntryDirectly(entryId: string): Promise<TeacherActionResponse<{ id: string }>> {
+  const { error } = await supabase.from('entries').delete().eq('id', entryId);
+  if (error) {
+    return { error: getBackendRequiredError(error.message) };
+  }
+
+  return { data: { id: entryId } };
+}
+
+async function deleteEntriesByDateDirectly(date: string): Promise<TeacherActionResponse<{ date: string }>> {
+  const { error } = await supabase.from('entries').delete().eq('round_date', date);
+  if (error) {
+    return { error: getBackendRequiredError(error.message) };
+  }
+
+  return { data: { date } };
 }
 
 async function getFunctionErrorMessage(error: unknown): Promise<string> {
@@ -83,7 +115,7 @@ export async function loginTeacher(): Promise<TeacherActionResponse<TeacherSessi
   }
 
   if (result.error && isFunctionMissingMessage(result.error)) {
-    return { error: getBackendRequiredError(result.error) };
+    return createLocalTeacherSession();
   }
 
   return result;
@@ -101,7 +133,7 @@ export async function updateTopic(token: string, date: string, topic: string): P
   }
 
   if (result.error && isFunctionMissingMessage(result.error)) {
-    return { error: getBackendRequiredError(result.error) };
+    return upsertTopicDirectly(date, topic);
   }
 
   return result;
@@ -121,7 +153,7 @@ export async function deleteEntry(token: string, entryId: string): Promise<Teach
   }
 
   if (result.error && isFunctionMissingMessage(result.error)) {
-    return { error: getBackendRequiredError(result.error) };
+    return deleteEntryDirectly(entryId);
   }
 
   return result;
@@ -141,7 +173,7 @@ export async function deleteEntriesByDate(token: string, date: string): Promise<
   }
 
   if (result.error && isFunctionMissingMessage(result.error)) {
-    return { error: getBackendRequiredError(result.error) };
+    return deleteEntriesByDateDirectly(date);
   }
 
   return result;
