@@ -1,6 +1,6 @@
 import type { Round, TeacherActionResponse, TeacherSession } from '../types/app';
 import { deleteLocalEntriesByDate, deleteLocalEntry, upsertLocalRound } from './localData';
-import { enableLocalDataFallback, shouldUseLocalData, supabase } from './supabase';
+import { enableLocalDataFallback, isSupabaseConfigured, shouldUseLocalData, supabase } from './supabase';
 
 const TEACHER_TOKEN_KEY = 'classword_teacher_token';
 
@@ -15,6 +15,14 @@ function createLocalTeacherSession(): TeacherActionResponse<TeacherSession> {
 
 function isFunctionMissingMessage(message: string): boolean {
   return message.includes('Requested function was not found') || message.includes('Failed to send a request to the Edge Function');
+}
+
+function shouldFallbackToLocalData(error: string): boolean {
+  return !isSupabaseConfigured && isFunctionMissingMessage(error);
+}
+
+function getBackendRequiredError(error: string): string {
+  return `${error} 교사용 기능을 공유하려면 Supabase Edge Function을 배포해야 합니다.`;
 }
 
 async function getFunctionErrorMessage(error: unknown): Promise<string> {
@@ -46,7 +54,13 @@ async function callTeacherAction<T>(action: string, payload: Record<string, unkn
 }
 
 export function getTeacherToken(): string | null {
-  return localStorage.getItem(TEACHER_TOKEN_KEY);
+  const token = localStorage.getItem(TEACHER_TOKEN_KEY);
+  if (isSupabaseConfigured && token?.startsWith('local-')) {
+    localStorage.removeItem(TEACHER_TOKEN_KEY);
+    return null;
+  }
+
+  return token;
 }
 
 export function saveTeacherToken(token: string): void {
@@ -63,9 +77,13 @@ export async function loginTeacher(): Promise<TeacherActionResponse<TeacherSessi
   }
 
   const result = await callTeacherAction<TeacherSession>('login', {});
-  if (result.error && isFunctionMissingMessage(result.error)) {
+  if (result.error && shouldFallbackToLocalData(result.error)) {
     enableLocalDataFallback();
     return createLocalTeacherSession();
+  }
+
+  if (result.error && isFunctionMissingMessage(result.error)) {
+    return { error: getBackendRequiredError(result.error) };
   }
 
   return result;
@@ -77,9 +95,13 @@ export async function updateTopic(token: string, date: string, topic: string): P
   }
 
   const result = await callTeacherAction<Round>('updateTopic', { token, date, topic });
-  if (result.error && isFunctionMissingMessage(result.error)) {
+  if (result.error && shouldFallbackToLocalData(result.error)) {
     enableLocalDataFallback();
     return { data: upsertLocalRound(date, topic) };
+  }
+
+  if (result.error && isFunctionMissingMessage(result.error)) {
+    return { error: getBackendRequiredError(result.error) };
   }
 
   return result;
@@ -92,10 +114,14 @@ export async function deleteEntry(token: string, entryId: string): Promise<Teach
   }
 
   const result = await callTeacherAction<{ id: string }>('deleteEntry', { token, entryId });
-  if (result.error && isFunctionMissingMessage(result.error)) {
+  if (result.error && shouldFallbackToLocalData(result.error)) {
     enableLocalDataFallback();
     deleteLocalEntry(entryId);
     return { data: { id: entryId } };
+  }
+
+  if (result.error && isFunctionMissingMessage(result.error)) {
+    return { error: getBackendRequiredError(result.error) };
   }
 
   return result;
@@ -108,10 +134,14 @@ export async function deleteEntriesByDate(token: string, date: string): Promise<
   }
 
   const result = await callTeacherAction<{ date: string }>('deleteEntriesByDate', { token, date });
-  if (result.error && isFunctionMissingMessage(result.error)) {
+  if (result.error && shouldFallbackToLocalData(result.error)) {
     enableLocalDataFallback();
     deleteLocalEntriesByDate(date);
     return { data: { date } };
+  }
+
+  if (result.error && isFunctionMissingMessage(result.error)) {
+    return { error: getBackendRequiredError(result.error) };
   }
 
   return result;
