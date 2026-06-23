@@ -6,7 +6,7 @@ const STUDENT_COLORS = [
   '#fad2e1',
   '#e2ece9',
   '#bee1e6',
-  '#f0efeb',
+  '#ffcb77',
   '#dfe7fd',
   '#cddafd',
   '#e8e8ff',
