@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent, PointerEvent } from 'react';
+import { getInitialLabel } from '../lib/initials';
 import type { Entry, Initial } from '../types/app';
 
 const GOMA_VIEWPORT_PADDING = 12;
@@ -61,6 +62,9 @@ export function GomaNotifier({
   complete,
 }: GomaNotifierProps) {
   const messages = useMemo(() => {
+    const selectedInitialLabel = selectedInitial ? getInitialLabel(selectedInitial) : null;
+    const submittedInitialLabel = submittedEntry ? getInitialLabel(submittedEntry.initial) : null;
+
     if (loadError) {
       return [
         '앗, 낱말판을 못 불러왔어. 잠시 뒤에 다시 봐 줘.',
@@ -96,7 +100,7 @@ export function GomaNotifier({
 
     if (submittedEntry) {
       return [
-        `${submittedEntry.initial} ${submittedEntry.word}, 잘 등록됐어.`,
+        `${submittedInitialLabel} ${submittedEntry.word}, 잘 등록됐어.`,
         '이미 낱말을 등록했어. 다른 친구에게 힌트를 줘 봐.',
         `아직 ${remainingCount}개가 남았어. 친구들이 떠올릴 수 있게 응원해 줘.`,
         '좋은 힌트는 답을 알려 주기보다 생각할 문을 열어 줘.',
@@ -114,12 +118,12 @@ export function GomaNotifier({
 
     if (selectedInitial) {
       return [
-        `${selectedInitial}로 시작하는 낱말을 생각해 봐.`,
+        `${selectedInitialLabel}로 시작하는 낱말을 생각해 봐.`,
         `지금 현재 ${remainingCount}개 남았어.`,
         '떠오른 낱말이 주제와 맞는지도 확인해 봐.',
         '천천히 생각한 낱말일수록 오래 기억에 남아.',
         '좋은 답은 빠른 손보다 차분한 생각에서 나와.',
-        `${selectedInitial} 소리를 입으로 작게 말해 보면 낱말이 떠오를 수 있어.`,
+        `${selectedInitialLabel} 소리를 입으로 작게 말해 보면 낱말이 떠오를 수 있어.`,
         '주제에서 볼 수 있는 것, 들을 수 있는 것, 떠오르는 것을 생각해 봐.',
         '너무 어려우면 주변 친구들이 쓴 낱말을 살짝 참고해 봐.',
         '짧은 낱말도 괜찮아. 주제와 맞으면 좋은 답이야.',

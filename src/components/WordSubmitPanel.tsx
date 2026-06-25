@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Send } from 'lucide-react';
+import { getInitialLabel } from '../lib/initials';
 import type { Initial } from '../types/app';
 
 type WordSubmitPanelProps = {
@@ -15,6 +16,7 @@ export function WordSubmitPanel({ selectedInitial, initialWord = '', submitLabel
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingWord, setPendingWord] = useState('');
+  const selectedInitialLabel = selectedInitial ? getInitialLabel(selectedInitial) : null;
 
   useEffect(() => {
     setWord(initialWord);
@@ -54,7 +56,7 @@ export function WordSubmitPanel({ selectedInitial, initialWord = '', submitLabel
 
   return (
     <form className="submit-panel" onSubmit={handleSubmit}>
-      <label htmlFor="word-input">{selectedInitial ?? '초성'}</label>
+      <label htmlFor="word-input">{selectedInitialLabel ?? '초성'}</label>
       <div className="submit-row">
         <input
           id="word-input"
@@ -73,7 +75,7 @@ export function WordSubmitPanel({ selectedInitial, initialWord = '', submitLabel
       {pendingWord ? (
         <div className="confirm-panel" role="alert">
           <strong>
-            {selectedInitial} {pendingWord}
+            {selectedInitialLabel} {pendingWord}
           </strong>
           <span>맞나요?</span>
           <div className="confirm-actions">

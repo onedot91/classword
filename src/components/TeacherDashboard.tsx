@@ -1,9 +1,8 @@
-import { AlertTriangle, LogOut, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Calendar, LogOut, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { INITIALS } from '../lib/initials';
 import type { Entry, Round } from '../types/app';
 import { ConfettiComplete } from './ConfettiComplete';
-import { HistoryViewer } from './HistoryViewer';
 import { InitialGrid } from './InitialGrid';
 import { TopicEditor } from './TopicEditor';
 
@@ -53,6 +52,10 @@ export function TeacherDashboard({
         <div>
           <div className="teacher-header-meta">
             <div className="page-kicker">교사용</div>
+            <label className="teacher-date-control">
+              <Calendar size={18} aria-hidden="true" />
+              <input type="date" value={selectedDate} onChange={(event) => onDateChange(event.target.value)} aria-label="날짜 선택" />
+            </label>
           </div>
           <h1 className="topic-sentence">
             {topicLabel}는 <span className="topic-word">{round?.topic || '미정'}</span> 입니다.
@@ -77,9 +80,6 @@ export function TeacherDashboard({
             </button>
           </div>
           <InitialGrid entries={entries} teacherMode onDelete={onDeleteEntry} />
-        </section>
-        <section className="teacher-side">
-          <HistoryViewer selectedDate={selectedDate} round={round} entries={entries} onDateChange={onDateChange} />
         </section>
       </div>
 

@@ -147,6 +147,28 @@ h2 {
   margin-bottom: 14px;
 }
 
+.teacher-date-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 43px;
+  border: 1px solid rgba(23, 23, 19, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  padding: 0 13px;
+  box-shadow: 0 8px 18px rgba(31, 28, 18, 0.05);
+}
+
+.teacher-date-control input {
+  width: 142px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.98rem;
+  font-weight: 950;
+}
+
 .student-header-meta .student-badge {
   padding: 9px 16px;
   font-size: 1.05rem;
@@ -781,7 +803,7 @@ h2 {
 .submit-row input:focus,
 .topic-form input:focus,
 .login-form input:focus,
-.history-viewer input:focus {
+.teacher-date-control input:focus {
   outline: none;
   box-shadow: var(--focus-ring), inset 0 2px 0 rgba(23, 23, 19, 0.04);
 }
@@ -979,8 +1001,7 @@ h2 {
 
 .submit-row input,
 .topic-form input,
-.login-form input,
-.history-viewer input {
+.login-form input {
   min-height: 52px;
   min-width: 0;
   flex: 1;

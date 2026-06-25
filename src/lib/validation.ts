@@ -1,5 +1,5 @@
 import type { Initial } from '../types/app';
-import { getInitialFromWord } from './initials';
+import { acceptsWordInitial, getInitialFromWord, getInitialPrompt } from './initials';
 
 const BAD_WORDS = ['씨발', '시발', '병신', '바보', '멍청이', '꺼져', '죽어', '똥개', '좆', 'ㅅㅂ'];
 const JAMO_ONLY = /^[ㄱ-ㅎㅏ-ㅣ]+$/;
@@ -46,8 +46,8 @@ export function validateWord(input: string, selectedInitial: Initial): WordValid
     return { ok: false, message: '한글 낱말로 시작해 주세요.' };
   }
 
-  if (actualInitial !== selectedInitial) {
-    return { ok: false, message: `${selectedInitial}으로 시작하는 낱말을 써 주세요.` };
+  if (!acceptsWordInitial(selectedInitial, actualInitial)) {
+    return { ok: false, message: `${getInitialPrompt(selectedInitial)}으로 시작하는 낱말을 써 주세요.` };
   }
 
   return { ok: true, word };

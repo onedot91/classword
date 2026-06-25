@@ -1,5 +1,5 @@
 import type { Entry, Round } from '../types/app';
-import { INITIALS } from '../lib/initials';
+import { getInitialLabel, INITIALS } from '../lib/initials';
 
 type HistoryViewerProps = {
   selectedDate: string;
@@ -23,7 +23,7 @@ export function HistoryViewer({ selectedDate, round, entries, onDateChange }: Hi
           const entry = entriesByInitial.get(initial);
           return (
             <div key={initial} className={entry ? 'history-row filled' : 'history-row'}>
-              <strong>{initial}</strong>
+              <strong>{getInitialLabel(initial)}</strong>
               <span>{entry ? entry.word : '-'}</span>
               <em>{entry ? `${entry.student_number}번` : ''}</em>
             </div>

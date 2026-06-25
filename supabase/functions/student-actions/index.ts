@@ -7,6 +7,13 @@ type StudentAction =
   | { action: 'deleteEntry'; entryId: string; studentNumber: number };
 
 const INITIALS: Initial[] = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅅ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+const INITIAL_ALIASES: Partial<Record<Initial, string>> = {
+  ㄱ: 'ㄲ',
+  ㄷ: 'ㄸ',
+  ㅂ: 'ㅃ',
+  ㅅ: 'ㅆ',
+  ㅈ: 'ㅉ',
+};
 const CHOSEONG = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
 const BAD_WORDS = ['씨발', '시발', '병신', '바보', '멍청이', '꺼져', '죽어', '똥개', '좆', 'ㅅㅂ'];
 const JAMO_ONLY = /^[ㄱ-ㅎㅏ-ㅣ]+$/;
@@ -46,6 +53,19 @@ function getInitialFromWord(word: string): string | null {
   }
 
   return CHOSEONG[Math.floor(code / (21 * 28))] ?? null;
+}
+
+function getAcceptedInitials(initial: Initial): string[] {
+  const alias = INITIAL_ALIASES[initial];
+  return alias ? [initial, alias] : [initial];
+}
+
+function acceptsWordInitial(selectedInitial: Initial, actualInitial: string): boolean {
+  return getAcceptedInitials(selectedInitial).includes(actualInitial);
+}
+
+function getInitialPrompt(initial: Initial): string {
+  return getAcceptedInitials(initial).join(' 또는 ');
 }
 
 function validateDate(date: string): string | null {
@@ -98,8 +118,8 @@ function validateWord(input: string, selectedInitial: Initial): { ok: true; word
     return { ok: false, message: '한글 낱말로 시작해 주세요.' };
   }
 
-  if (actualInitial !== selectedInitial) {
-    return { ok: false, message: `${selectedInitial}으로 시작하는 낱말을 써 주세요.` };
+  if (!acceptsWordInitial(selectedInitial, actualInitial)) {
+    return { ok: false, message: `${getInitialPrompt(selectedInitial)}으로 시작하는 낱말을 써 주세요.` };
   }
 
   return { ok: true, word };

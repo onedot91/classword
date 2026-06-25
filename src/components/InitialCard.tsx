@@ -1,6 +1,7 @@
 import { Check, Trash2, X } from 'lucide-react';
 import { FormEvent, KeyboardEvent, useEffect } from 'react';
 import { getStudentColor } from '../lib/colors';
+import { getInitialLabel } from '../lib/initials';
 import type { Entry, Initial } from '../types/app';
 import { StudentBadge } from './StudentBadge';
 
@@ -46,6 +47,7 @@ export function InitialCard({
   const canSelect = Boolean(onSelect) && !disabled && (!entry || entry.id === editableEntryId);
   const canDeleteEntry = Boolean(onDelete && entry?.id === editableEntryId);
   const style = entry ? { borderColor: getStudentColor(entry.student_number) } : undefined;
+  const initialLabel = getInitialLabel(initial);
 
   useEffect(() => {
     if (!selected || !inlineEditor?.pendingWord) {
@@ -105,7 +107,7 @@ export function InitialCard({
               <X size={18} />
             </button>
           ) : null}
-          <span className="initial-letter">{initial}</span>
+          <span className="initial-letter">{initialLabel}</span>
           {inlineEditor.pendingWord ? (
             <div className="card-confirm">
               <strong>{inlineEditor.pendingWord}</strong>
@@ -148,7 +150,7 @@ export function InitialCard({
             }}
             onKeyDown={handleCardKeyDown}
           >
-            <span className="initial-letter">{initial}</span>
+            <span className="initial-letter">{initialLabel}</span>
             <span className="entry-content">
               <span className="word-line">{entry.word}</span>
               <span className="entry-meta">
@@ -171,7 +173,7 @@ export function InitialCard({
           </div>
         ) : (
           <button type="button" className="initial-card-main" onClick={() => onSelect?.(initial)} disabled={!canSelect}>
-            <span className="initial-letter">{initial}</span>
+            <span className="initial-letter">{initialLabel}</span>
             <span className="empty-mark" aria-hidden="true">
               +
             </span>
