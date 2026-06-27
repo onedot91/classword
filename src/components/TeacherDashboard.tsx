@@ -1,9 +1,10 @@
-import { AlertTriangle, Calendar, LogOut, Trash2, X } from 'lucide-react';
+import { AlertTriangle, LogOut, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { INITIALS } from '../lib/initials';
 import type { Entry, Round } from '../types/app';
 import { ConfettiComplete } from './ConfettiComplete';
 import { InitialGrid } from './InitialGrid';
+import { TopicDatePicker } from './TopicDatePicker';
 import { TopicEditor } from './TopicEditor';
 
 type TeacherDashboardProps = {
@@ -11,6 +12,7 @@ type TeacherDashboardProps = {
   todayDate: string;
   round: Round | null;
   savedTopics: string[];
+  topicDates: string[];
   entries: Entry[];
   completedCount: number;
   onDateChange: (date: string) => void;
@@ -25,6 +27,7 @@ export function TeacherDashboard({
   todayDate,
   round,
   savedTopics,
+  topicDates,
   entries,
   completedCount,
   onDateChange,
@@ -52,10 +55,7 @@ export function TeacherDashboard({
         <div>
           <div className="teacher-header-meta">
             <div className="page-kicker">교사용</div>
-            <label className="teacher-date-control">
-              <Calendar size={18} aria-hidden="true" />
-              <input type="date" value={selectedDate} onChange={(event) => onDateChange(event.target.value)} aria-label="날짜 선택" />
-            </label>
+            <TopicDatePicker selectedDate={selectedDate} todayDate={todayDate} topicDates={topicDates} onDateChange={onDateChange} />
           </div>
           <h1 className="topic-sentence">
             {topicLabel}는 <span className="topic-word">{round?.topic || '미정'}</span> 입니다.

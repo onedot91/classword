@@ -25,6 +25,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
   const [selectedDate, setSelectedDate] = useState(todayDate);
   const [round, setRound] = useState<Round | null>(null);
   const [savedTopics, setSavedTopics] = useState<string[]>([]);
+  const [topicDates, setTopicDates] = useState<string[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loadError, setLoadError] = useState('');
   const [isCreatingSession, setIsCreatingSession] = useState(false);
@@ -34,16 +35,18 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     setLoadError('');
 
     if (shouldUseLocalData()) {
+      const localRounds = getLocalRounds();
       setRound(getLocalRound(selectedDate));
-      setSavedTopics(getLocalRounds().map((localRound) => localRound.topic));
+      setSavedTopics(localRounds.map((localRound) => localRound.topic));
+      setTopicDates(localRounds.filter((localRound) => localRound.topic.trim()).map((localRound) => localRound.round_date));
       setEntries(getLocalEntries(selectedDate));
       return;
     }
 
-    const [roundResult, entriesResult, savedTopicsResult] = await Promise.all([
+    const [roundResult, entriesResult, savedRoundsResult] = await Promise.all([
       supabase.from('rounds').select('*').eq('round_date', selectedDate).maybeSingle(),
       supabase.from('entries').select('*').eq('round_date', selectedDate).order('created_at', { ascending: true }),
-      supabase.from('rounds').select('topic'),
+      supabase.from('rounds').select('round_date, topic'),
     ]);
 
     if (roundResult.error) {
@@ -58,10 +61,12 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
       setEntries((entriesResult.data ?? []) as Entry[]);
     }
 
-    if (savedTopicsResult.error) {
-      setLoadError(savedTopicsResult.error.message);
+    if (savedRoundsResult.error) {
+      setLoadError(savedRoundsResult.error.message);
     } else {
-      setSavedTopics((savedTopicsResult.data ?? []).map((savedRound) => savedRound.topic));
+      const savedRounds = savedRoundsResult.data ?? [];
+      setSavedTopics(savedRounds.map((savedRound) => savedRound.topic));
+      setTopicDates(savedRounds.filter((savedRound) => savedRound.topic.trim()).map((savedRound) => savedRound.round_date));
     }
   }, [selectedDate]);
 
@@ -202,6 +207,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
         todayDate={todayDate}
         round={round}
         savedTopics={savedTopics}
+        topicDates={topicDates}
         entries={entries}
         completedCount={entries.length}
         onDateChange={setSelectedDate}
