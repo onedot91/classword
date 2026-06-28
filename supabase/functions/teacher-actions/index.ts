@@ -6,15 +6,38 @@ type TeacherAction =
   | { action: 'deleteEntry'; token: string; entryId: string }
   | { action: 'deleteEntriesByDate'; token: string; date: string };
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const DEFAULT_ALLOWED_ORIGINS = ['https://classword.vercel.app'];
+const LOCAL_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
-function jsonResponse(body: unknown, status = 200): Response {
+function getAllowedOrigins(): string[] {
+  const configuredOrigins = Deno.env
+    .get('CORS_ALLOWED_ORIGINS')
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return configuredOrigins?.length ? configuredOrigins : [...DEFAULT_ALLOWED_ORIGINS, ...LOCAL_ALLOWED_ORIGINS];
+}
+
+function getCorsHeaders(req: Request): HeadersInit {
+  const origin = req.headers.get('Origin');
+  const headers: Record<string, string> = {
+    Vary: 'Origin',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
+  if (origin && getAllowedOrigins().includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+
+  return headers;
+}
+
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -44,7 +67,7 @@ async function validateTeacherToken(token: string): Promise<boolean> {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -59,14 +82,14 @@ Deno.serve(async (req) => {
         .single();
 
       if (error) {
-        return jsonResponse({ error: error.message }, 500);
+        return jsonResponse(req, { error: error.message }, 500);
       }
 
-      return jsonResponse({ data: { token: data.token, expiresAt: data.expires_at } });
+      return jsonResponse(req, { data: { token: data.token, expiresAt: data.expires_at } });
     }
 
     if (!(await validateTeacherToken(body.token))) {
-      return jsonResponse({ error: '다시 로그인해 주세요.' }, 401);
+      return jsonResponse(req, { error: '다시 로그인해 주세요.' }, 401);
     }
 
     if (body.action === 'updateTopic') {
@@ -78,33 +101,33 @@ Deno.serve(async (req) => {
         .single();
 
       if (error) {
-        return jsonResponse({ error: error.message }, 500);
+        return jsonResponse(req, { error: error.message }, 500);
       }
 
-      return jsonResponse({ data });
+      return jsonResponse(req, { data });
     }
 
     if (body.action === 'deleteEntry') {
       const { error } = await supabase.from('entries').delete().eq('id', body.entryId);
       if (error) {
-        return jsonResponse({ error: error.message }, 500);
+        return jsonResponse(req, { error: error.message }, 500);
       }
 
-      return jsonResponse({ data: { id: body.entryId } });
+      return jsonResponse(req, { data: { id: body.entryId } });
     }
 
     if (body.action === 'deleteEntriesByDate') {
       const { error } = await supabase.from('entries').delete().eq('round_date', body.date);
       if (error) {
-        return jsonResponse({ error: error.message }, 500);
+        return jsonResponse(req, { error: error.message }, 500);
       }
 
-      return jsonResponse({ data: { date: body.date } });
+      return jsonResponse(req, { data: { date: body.date } });
     }
 
-    return jsonResponse({ error: '알 수 없는 작업입니다.' }, 400);
+    return jsonResponse(req, { error: '알 수 없는 작업입니다.' }, 400);
   } catch (error) {
     const message = error instanceof Error ? error.message : '요청을 처리할 수 없습니다.';
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse(req, { error: message }, 500);
   }
 });

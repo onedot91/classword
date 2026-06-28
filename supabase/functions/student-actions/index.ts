@@ -21,15 +21,38 @@ const NUMBER_ONLY = /^\d+$/;
 const SPECIAL_ONLY = /^[^\p{L}\p{N}]+$/u;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+const DEFAULT_ALLOWED_ORIGINS = ['https://classword.vercel.app'];
+const LOCAL_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
-function jsonResponse(body: unknown, status = 200): Response {
+function getAllowedOrigins(): string[] {
+  const configuredOrigins = Deno.env
+    .get('CORS_ALLOWED_ORIGINS')
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return configuredOrigins?.length ? configuredOrigins : [...DEFAULT_ALLOWED_ORIGINS, ...LOCAL_ALLOWED_ORIGINS];
+}
+
+function getCorsHeaders(req: Request): HeadersInit {
+  const origin = req.headers.get('Origin');
+  const headers: Record<string, string> = {
+    Vary: 'Origin',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
+  if (origin && getAllowedOrigins().includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+
+  return headers;
+}
+
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -131,11 +154,11 @@ const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: getCorsHeaders(req) });
   }
 
   if (req.method !== 'POST') {
-    return jsonResponse({ error: '지원하지 않는 요청입니다.' }, 405);
+    return jsonResponse(req, { error: '지원하지 않는 요청입니다.' }, 405);
   }
 
   try {
@@ -144,21 +167,21 @@ Deno.serve(async (req) => {
     if (body.action === 'submitEntry') {
       const dateError = validateDate(body.date);
       if (dateError) {
-        return jsonResponse({ error: dateError }, 400);
+        return jsonResponse(req, { error: dateError }, 400);
       }
 
       const studentError = validateStudentNumber(body.studentNumber);
       if (studentError) {
-        return jsonResponse({ error: studentError }, 400);
+        return jsonResponse(req, { error: studentError }, 400);
       }
 
       if (!INITIALS.includes(body.initial)) {
-        return jsonResponse({ error: '초성이 올바르지 않아요.' }, 400);
+        return jsonResponse(req, { error: '초성이 올바르지 않아요.' }, 400);
       }
 
       const validation = validateWord(body.word, body.initial);
       if (!validation.ok) {
-        return jsonResponse({ error: validation.message }, 400);
+        return jsonResponse(req, { error: validation.message }, 400);
       }
 
       const { error: roundError } = await supabase
@@ -168,7 +191,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (roundError && roundError.code !== '23505') {
-        return jsonResponse({ error: roundError.message }, 500);
+        return jsonResponse(req, { error: roundError.message }, 500);
       }
 
       const occupiedByInitial = await supabase
@@ -179,11 +202,11 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (occupiedByInitial.error) {
-        return jsonResponse({ error: occupiedByInitial.error.message }, 500);
+        return jsonResponse(req, { error: occupiedByInitial.error.message }, 500);
       }
 
       if (occupiedByInitial.data && occupiedByInitial.data.id !== body.entryId) {
-        return jsonResponse({ error: '이미 채워진 칸이에요.' }, 409);
+        return jsonResponse(req, { error: '이미 채워진 칸이에요.' }, 409);
       }
 
       if (body.entryId) {
@@ -194,11 +217,11 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (existing.error) {
-          return jsonResponse({ error: existing.error.message }, 500);
+          return jsonResponse(req, { error: existing.error.message }, 500);
         }
 
         if (!existing.data || existing.data.student_number !== body.studentNumber) {
-          return jsonResponse({ error: '수정할 낱말을 찾을 수 없어요.' }, 404);
+          return jsonResponse(req, { error: '수정할 낱말을 찾을 수 없어요.' }, 404);
         }
 
         const { data, error } = await supabase
@@ -210,10 +233,10 @@ Deno.serve(async (req) => {
           .single();
 
         if (error) {
-          return jsonResponse({ error: error.message }, 500);
+          return jsonResponse(req, { error: error.message }, 500);
         }
 
-        return jsonResponse({ data });
+        return jsonResponse(req, { data });
       }
 
       const { data, error } = await supabase
@@ -229,18 +252,18 @@ Deno.serve(async (req) => {
 
       if (error) {
         if (error.code === '23505') {
-          return jsonResponse({ error: '오늘은 한 번만 제출할 수 있어요.' }, 409);
+          return jsonResponse(req, { error: '오늘은 한 번만 제출할 수 있어요.' }, 409);
         }
-        return jsonResponse({ error: error.message }, 500);
+        return jsonResponse(req, { error: error.message }, 500);
       }
 
-      return jsonResponse({ data });
+      return jsonResponse(req, { data });
     }
 
     if (body.action === 'deleteEntry') {
       const studentError = validateStudentNumber(body.studentNumber);
       if (studentError) {
-        return jsonResponse({ error: studentError }, 400);
+        return jsonResponse(req, { error: studentError }, 400);
       }
 
       const { data, error } = await supabase
@@ -252,19 +275,19 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (error) {
-        return jsonResponse({ error: error.message }, 500);
+        return jsonResponse(req, { error: error.message }, 500);
       }
 
       if (!data) {
-        return jsonResponse({ error: '삭제할 낱말을 찾을 수 없어요.' }, 404);
+        return jsonResponse(req, { error: '삭제할 낱말을 찾을 수 없어요.' }, 404);
       }
 
-      return jsonResponse({ data: { id: body.entryId } });
+      return jsonResponse(req, { data: { id: body.entryId } });
     }
 
-    return jsonResponse({ error: '알 수 없는 작업입니다.' }, 400);
+    return jsonResponse(req, { error: '알 수 없는 작업입니다.' }, 400);
   } catch (error) {
     const message = error instanceof Error ? error.message : '요청을 처리할 수 없습니다.';
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse(req, { error: message }, 500);
   }
 });
