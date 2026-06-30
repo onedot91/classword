@@ -105,11 +105,20 @@ function validateStudentNumber(studentNumber: number): string | null {
   return null;
 }
 
-function validateWord(input: string, selectedInitial: Initial): { ok: true; word: string } | { ok: false; message: string } {
+function normalizeForComparison(value: string): string {
+  return value.trim().replace(/\s+/g, '');
+}
+
+function validateWord(input: string, selectedInitial: Initial, topic = ''): { ok: true; word: string } | { ok: false; message: string } {
   const word = input.trim();
+  const normalizedTopic = normalizeForComparison(topic);
 
   if (!word) {
     return { ok: false, message: '낱말을 입력해 주세요.' };
+  }
+
+  if (normalizedTopic && normalizeForComparison(word) === normalizedTopic) {
+    return { ok: false, message: '주제 낱말 말고 다른 낱말을 찾아 주세요.' };
   }
 
   if (NUMBER_ONLY.test(word)) {
@@ -179,7 +188,17 @@ Deno.serve(async (req) => {
         return jsonResponse(req, { error: '초성이 올바르지 않아요.' }, 400);
       }
 
-      const validation = validateWord(body.word, body.initial);
+      const currentRound = await supabase
+        .from('rounds')
+        .select('topic')
+        .eq('round_date', body.date)
+        .maybeSingle();
+
+      if (currentRound.error) {
+        return jsonResponse(req, { error: currentRound.error.message }, 500);
+      }
+
+      const validation = validateWord(body.word, body.initial, currentRound.data?.topic ?? '');
       if (!validation.ok) {
         return jsonResponse(req, { error: validation.message }, 400);
       }

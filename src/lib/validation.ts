@@ -10,11 +10,20 @@ export type WordValidationResult =
   | { ok: true; word: string }
   | { ok: false; message: string };
 
-export function validateWord(input: string, selectedInitial: Initial): WordValidationResult {
+function normalizeForComparison(value: string): string {
+  return value.trim().replace(/\s+/g, '');
+}
+
+export function validateWord(input: string, selectedInitial: Initial, topic = ''): WordValidationResult {
   const word = input.trim();
+  const normalizedTopic = normalizeForComparison(topic);
 
   if (!word) {
     return { ok: false, message: '낱말을 입력해 주세요.' };
+  }
+
+  if (normalizedTopic && normalizeForComparison(word) === normalizedTopic) {
+    return { ok: false, message: '주제 낱말 말고 다른 낱말을 찾아 주세요.' };
   }
 
   if (NUMBER_ONLY.test(word)) {

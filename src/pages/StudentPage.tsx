@@ -132,7 +132,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
       return '이미 채워진 칸이에요.';
     }
 
-    const validation = validateWord(input, initial);
+    const validation = validateWord(input, initial, round?.topic);
     if (!validation.ok) {
       return validation.message;
     }
