@@ -16,6 +16,10 @@
           "value": "https://classword.vercel.app"
         },
         {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        },
+        {
           "key": "Vary",
           "value": "Origin"
         },
