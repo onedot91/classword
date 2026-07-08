@@ -129,8 +129,8 @@ function validateWord(input: string, selectedInitial: Initial, topic = ''): { ok
     return { ok: false, message: '낱말을 입력해 주세요.' };
   }
 
-  if ([...word].length > 6) {
-    return { ok: false, message: '6글자까지 쓸 수 있어요.' };
+  if ([...word].length > 8) {
+    return { ok: false, message: '8글자까지 쓸 수 있어요.' };
   }
 
   if (JAMO_ONLY.test(word)) {

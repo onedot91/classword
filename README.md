@@ -56,6 +56,9 @@ supabase functions deploy teacher-actions
 supabase functions deploy student-actions
 ```
 
+기존 프로젝트에서 낱말 글자수 제한 같은 DB 제약 조건을 갱신할 때도 SQL Editor에서
+`supabase/schema.sql` 전체를 다시 실행합니다.
+
 ## 데이터베이스
 
 - `rounds`: 날짜별 주제

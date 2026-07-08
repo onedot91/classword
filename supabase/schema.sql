@@ -32,7 +32,7 @@ create table if not exists public.entries (
     check (length(trim(word)) > 0),
 
   constraint entries_word_length_check
-    check (char_length(trim(word)) between 1 and 6),
+    check (char_length(trim(word)) between 1 and 8),
 
   constraint entries_one_per_student_per_day_unique
     unique (round_date, student_number),
@@ -46,6 +46,13 @@ create table if not exists public.teacher_sessions (
   expires_at timestamptz not null,
   created_at timestamptz not null default now()
 );
+
+alter table public.entries
+  drop constraint if exists entries_word_length_check;
+
+alter table public.entries
+  add constraint entries_word_length_check
+  check (char_length(trim(word)) between 1 and 8);
 
 create index if not exists entries_round_date_idx
   on public.entries(round_date);
