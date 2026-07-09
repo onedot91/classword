@@ -1,6 +1,6 @@
 # classword
 
-초등학교 3학년 학급이 함께 주제에 맞는 낱말을 초성별로 채우는 실시간 웹앱입니다.
+초등학교 3학년 학급이 함께 주제에 맞는 낱말을 초성별로 채우는 웹앱입니다.
 
 ## 주요 기능
 
@@ -9,7 +9,7 @@
 - 오늘의 주제와 14개 초성 카드 표시
 - 학생 하루 1회 제출 제한
 - 단어 첫 글자 초성과 선택 초성 일치 검증
-- Supabase Realtime 기반 즉시 반영
+- 3초 자동 갱신 기반 낱말판 반영
 - 교사용 주제 변경, 랜덤 주제, 삭제
 - 참여 현황과 날짜별 기록 조회
 - 14칸 완성 시 짧은 Confetti 효과
@@ -20,44 +20,32 @@
 src/
   app/          앱 진입과 라우팅 상태
   components/   화면 공통/학생/교사 컴포넌트
-  lib/          Supabase, 날짜, 초성, 검증, Realtime, 교사 API
+  lib/          API 클라이언트, 날짜, 초성, 검증, 교사 API
   pages/        번호 선택, 학생, 교사 페이지
   styles/       전역 CSS
   types/        앱/DB 타입
-supabase/
-  schema.sql
-  functions/teacher-actions/index.ts
+api/
+  board.ts
+  student-actions.ts
+  teacher-actions.ts
+sql/
+  neon-schema.sql
 ```
 
 ## 실행 방법
 
 ```bash
 npm install
-cp .env.example .env
 npm run dev
 ```
 
-`.env`에 Supabase 값을 입력합니다.
+로컬 `npm run dev`는 Vercel API를 실행하지 않으므로 localStorage fallback으로 동작합니다.
 
-```env
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
+## Neon 설정
 
-## Supabase 설정
-
-1. Supabase 프로젝트를 만듭니다.
-2. SQL Editor에서 `supabase/schema.sql` 전체를 실행합니다.
-3. Database > Replication에서 `rounds`, `entries`가 Realtime publication에 포함되어 있는지 확인합니다.
-4. Edge Function을 배포합니다.
-
-```bash
-supabase functions deploy teacher-actions
-supabase functions deploy student-actions
-```
-
-기존 프로젝트에서 낱말 글자수 제한 같은 DB 제약 조건을 갱신할 때도 SQL Editor에서
-`supabase/schema.sql` 전체를 다시 실행합니다.
+1. Neon 프로젝트를 만듭니다.
+2. Neon SQL Editor에서 `sql/neon-schema.sql` 전체를 실행합니다.
+3. Vercel Environment Variables에 `DATABASE_URL`을 추가합니다.
 
 ## 데이터베이스
 
@@ -79,8 +67,7 @@ supabase functions deploy student-actions
 3. Environment Variables에 아래 값을 추가합니다.
 
 ```env
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+DATABASE_URL=postgresql://...
 ```
 
 4. Build Command는 `npm run build`, Output Directory는 `dist`를 사용합니다.

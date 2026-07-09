@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { LOCAL_BOARD_EVENT } from './localData';
-import { shouldUseLocalData, supabase } from './supabase';
+import { shouldUseLocalData } from './backend';
 
 const BOARD_SYNC_INTERVAL_MS = 3000;
 
@@ -27,35 +27,15 @@ export function useRealtimeBoard({ date, onChange }: RealtimeBoardOptions): void
     document.addEventListener('visibilitychange', handleVisibilityChange);
     const syncIntervalId = window.setInterval(onChange, BOARD_SYNC_INTERVAL_MS);
 
-    if (shouldUseLocalData()) {
-      return () => {
-        window.removeEventListener(LOCAL_BOARD_EVENT, onChange);
-        window.removeEventListener('focus', onChange);
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        window.clearInterval(syncIntervalId);
-      };
+    if (!shouldUseLocalData()) {
+      onChange();
     }
-
-    const channel = supabase
-      .channel(`board-${date}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'entries', filter: `round_date=eq.${date}` },
-        onChange,
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'rounds', filter: `round_date=eq.${date}` },
-        onChange,
-      )
-      .subscribe();
 
     return () => {
       window.removeEventListener(LOCAL_BOARD_EVENT, onChange);
       window.removeEventListener('focus', onChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.clearInterval(syncIntervalId);
-      supabase.removeChannel(channel);
     };
   }, [date, onChange]);
 }

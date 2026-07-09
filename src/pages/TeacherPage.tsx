@@ -3,7 +3,7 @@ import { TeacherDashboard } from '../components/TeacherDashboard';
 import { getTodayDateKey } from '../lib/date';
 import { deleteLocalEntriesByDate, deleteLocalEntry, getLocalEntries, getLocalRound, getLocalRounds, upsertLocalRound } from '../lib/localData';
 import { useRealtimeBoard } from '../lib/realtime';
-import { shouldUseLocalData, supabase } from '../lib/supabase';
+import { getBoard, shouldUseLocalData } from '../lib/backend';
 import {
   clearTeacherToken,
   deleteEntriesByDate,
@@ -43,31 +43,17 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
       return;
     }
 
-    const [roundResult, entriesResult, savedRoundsResult] = await Promise.all([
-      supabase.from('rounds').select('*').eq('round_date', selectedDate).maybeSingle(),
-      supabase.from('entries').select('*').eq('round_date', selectedDate).order('created_at', { ascending: true }),
-      supabase.from('rounds').select('round_date, topic'),
-    ]);
-
-    if (roundResult.error) {
-      setLoadError(roundResult.error.message);
-    } else {
-      setRound(roundResult.data as Round | null);
+    const result = await getBoard(selectedDate);
+    if (result.error || !result.data) {
+      setLoadError(result.error ?? '학급 낱말판을 불러올 수 없습니다.');
+      return;
     }
 
-    if (entriesResult.error) {
-      setLoadError(entriesResult.error.message);
-    } else {
-      setEntries((entriesResult.data ?? []) as Entry[]);
-    }
-
-    if (savedRoundsResult.error) {
-      setLoadError(savedRoundsResult.error.message);
-    } else {
-      const savedRounds = savedRoundsResult.data ?? [];
-      setSavedTopics(savedRounds.map((savedRound) => savedRound.topic));
-      setTopicDates(savedRounds.filter((savedRound) => savedRound.topic.trim()).map((savedRound) => savedRound.round_date));
-    }
+    const savedRounds = result.data.savedRounds;
+    setRound(result.data.round);
+    setEntries([...result.data.entries]);
+    setSavedTopics(savedRounds.map((savedRound) => savedRound.topic));
+    setTopicDates(savedRounds.filter((savedRound) => savedRound.topic.trim()).map((savedRound) => savedRound.round_date));
   }, [selectedDate]);
 
   useEffect(() => {

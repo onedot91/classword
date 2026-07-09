@@ -9,7 +9,7 @@ import { deleteLocalEntry, getLocalEntries, getLocalRound, insertLocalEntry, upd
 import { useRealtimeBoard } from '../lib/realtime';
 import { playSound } from '../lib/sound';
 import { deleteStudentEntry, submitStudentEntry } from '../lib/studentApi';
-import { shouldUseLocalData, supabase } from '../lib/supabase';
+import { getBoard, shouldUseLocalData } from '../lib/backend';
 import { validateWord } from '../lib/validation';
 import type { Entry, Initial, Round, StudentNumber } from '../types/app';
 
@@ -41,23 +41,15 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
       return;
     }
 
-    const [roundResult, entriesResult] = await Promise.all([
-      supabase.from('rounds').select('*').eq('round_date', todayDate).maybeSingle(),
-      supabase.from('entries').select('*').eq('round_date', todayDate).order('created_at', { ascending: true }),
-    ]);
-
-    if (roundResult.error) {
-      setLoadError(roundResult.error.message);
-    } else {
-      setRound(roundResult.data as Round | null);
+    const result = await getBoard(todayDate);
+    if (result.error || !result.data) {
+      setLoadError(result.error ?? '학급 낱말판을 불러올 수 없습니다.');
+      setIsLoading(false);
+      return;
     }
 
-    if (entriesResult.error) {
-      setLoadError(entriesResult.error.message);
-    } else {
-      setEntries((entriesResult.data ?? []) as Entry[]);
-    }
-
+    setRound(result.data.round);
+    setEntries([...result.data.entries]);
     setIsLoading(false);
   }, [todayDate]);
 
