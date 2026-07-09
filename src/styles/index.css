@@ -1889,54 +1889,23 @@ h2 {
   }
 
   .goma-notifier {
-    right: 14px;
-    bottom: 48px;
-    width: 84px;
-    height: 84px;
+    position: static;
+    width: 72px;
+    height: 72px;
+    margin: 14px 12px 0 auto;
   }
 
   .goma-speech {
-    right: calc(100% + 14px);
-    bottom: 34px;
-    min-width: 0;
-    width: fit-content;
-    max-width: calc(100vw - 126px);
-    border-radius: 18px;
-    padding: 15px 16px;
-    font-size: 1.04rem;
-    font-weight: 800;
-    line-height: 1.42;
+    display: none;
   }
 
   .goma-speech,
   .goma-speech-placeholder {
-    min-height: 68px;
+    min-height: 0;
   }
 
   .goma-speech-placeholder {
-    right: calc(100% + 14px);
-    bottom: 34px;
-    width: calc(100vw - 126px);
-  }
-
-  .goma-speech::before {
-    right: -13px;
-    bottom: 19px;
-    width: 0;
-    height: 0;
-    border-top-width: 11px;
-    border-bottom-width: 11px;
-    border-left-width: 16px;
-  }
-
-  .goma-speech::after {
-    right: -10px;
-    bottom: 21px;
-    width: 0;
-    height: 0;
-    border-top-width: 10px;
-    border-bottom-width: 10px;
-    border-left-width: 13px;
+    display: none;
   }
 
   .card-input-form {

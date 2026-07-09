@@ -1,6 +1,6 @@
 import { Check, Trash2, X } from 'lucide-react';
 import { FormEvent, KeyboardEvent, useEffect } from 'react';
-import { getStudentColor } from '../lib/colors';
+import { getStudentBorderColor } from '../lib/colors';
 import { getInitialLabel } from '../lib/initials';
 import { sanitizeWordInput } from '../lib/validation';
 import type { Entry, Initial } from '../types/app';
@@ -47,7 +47,7 @@ export function InitialCard({
   const isFilled = Boolean(entry);
   const canSelect = Boolean(onSelect) && !disabled && (!entry || entry.id === editableEntryId);
   const canDeleteEntry = Boolean(onDelete && entry?.id === editableEntryId);
-  const style = entry ? { borderColor: getStudentColor(entry.student_number) } : undefined;
+  const style = entry ? { borderColor: getStudentBorderColor(entry.student_number) } : undefined;
   const initialLabel = getInitialLabel(initial);
 
   useEffect(() => {

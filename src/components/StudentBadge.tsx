@@ -1,5 +1,5 @@
 import type { StudentNumber } from '../types/app';
-import { getStudentColor } from '../lib/colors';
+import { getStudentBorderColor, getStudentColor, getStudentTextColor } from '../lib/colors';
 
 type StudentBadgeProps = {
   studentNumber: StudentNumber;
@@ -7,7 +7,14 @@ type StudentBadgeProps = {
 
 export function StudentBadge({ studentNumber }: StudentBadgeProps) {
   return (
-    <span className="student-badge" style={{ backgroundColor: getStudentColor(studentNumber) }}>
+    <span
+      className="student-badge"
+      style={{
+        backgroundColor: getStudentColor(studentNumber),
+        border: `1px solid ${getStudentBorderColor(studentNumber)}`,
+        color: getStudentTextColor(studentNumber),
+      }}
+    >
       {studentNumber}번
     </span>
   );
