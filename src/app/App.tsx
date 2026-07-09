@@ -5,28 +5,13 @@ import { TeacherPage } from '../pages/TeacherPage';
 import type { StudentNumber, UserNumber } from '../types/app';
 import { STORAGE_KEYS } from './routes';
 
-const CLASSWORD_STORAGE_PREFIX = 'classword_';
 const APP_STORAGE_VERSION = '2026-07-08-cache-reset';
-
-function removeClasswordStorage(storage: Storage): void {
-  const keysToRemove = [];
-  for (let index = 0; index < storage.length; index += 1) {
-    const key = storage.key(index);
-    if (key?.startsWith(CLASSWORD_STORAGE_PREFIX)) {
-      keysToRemove.push(key);
-    }
-  }
-
-  keysToRemove.forEach((key) => storage.removeItem(key));
-}
 
 function resetStoredStateAfterUpdate(): void {
   if (localStorage.getItem(STORAGE_KEYS.appVersion) === APP_STORAGE_VERSION) {
     return;
   }
 
-  removeClasswordStorage(localStorage);
-  removeClasswordStorage(sessionStorage);
   localStorage.setItem(STORAGE_KEYS.appVersion, APP_STORAGE_VERSION);
 }
 

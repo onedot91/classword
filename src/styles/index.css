@@ -1923,3 +1923,25 @@ h2 {
     flex-direction: column;
   }
 }
+
+@media (min-width: 621px) and (max-width: 720px) {
+  .goma-notifier {
+    position: static;
+    width: 72px;
+    height: 72px;
+    margin: 14px 12px 0 auto;
+  }
+
+  .goma-speech {
+    display: none;
+  }
+
+  .goma-speech,
+  .goma-speech-placeholder {
+    min-height: 0;
+  }
+
+  .goma-speech-placeholder {
+    display: none;
+  }
+}
