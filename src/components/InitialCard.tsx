@@ -2,6 +2,7 @@ import { Check, Trash2, X } from 'lucide-react';
 import { FormEvent, KeyboardEvent, useEffect } from 'react';
 import { getStudentColor } from '../lib/colors';
 import { getInitialLabel } from '../lib/initials';
+import { sanitizeWordInput } from '../lib/validation';
 import type { Entry, Initial } from '../types/app';
 import { StudentBadge } from './StudentBadge';
 
@@ -125,7 +126,7 @@ export function InitialCard({
             <form className="card-input-form" onSubmit={handleEditorSubmit}>
               <input
                 value={inlineEditor.word}
-                onChange={(event) => inlineEditor.onWordChange(event.target.value)}
+                onChange={(event) => inlineEditor.onWordChange(sanitizeWordInput(event.target.value))}
                 placeholder="낱말"
                 autoFocus
                 autoComplete="off"

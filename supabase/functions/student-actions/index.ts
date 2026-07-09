@@ -18,7 +18,7 @@ const CHOSEONG = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ',
 const BAD_WORDS = ['씨발', '시발', '병신', '바보', '멍청이', '꺼져', '죽어', '똥개', '좆', 'ㅅㅂ'];
 const JAMO_ONLY = /^[ㄱ-ㅎㅏ-ㅣ]+$/;
 const NUMBER_ONLY = /^\d+$/;
-const SPECIAL_ONLY = /^[^\p{L}\p{N}]+$/u;
+const SPECIAL_CHARACTER = /[^\p{L}\p{N}]/u;
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 const DEFAULT_ALLOWED_ORIGINS = ['https://classword.vercel.app'];
@@ -125,8 +125,8 @@ function validateWord(input: string, selectedInitial: Initial, topic = ''): { ok
     return { ok: false, message: '숫자만 쓸 수 없어요.' };
   }
 
-  if (SPECIAL_ONLY.test(word)) {
-    return { ok: false, message: '낱말을 입력해 주세요.' };
+  if (SPECIAL_CHARACTER.test(word)) {
+    return { ok: false, message: '특수 문자는 쓸 수 없어요.' };
   }
 
   if ([...word].length > 8) {

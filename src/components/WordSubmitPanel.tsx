@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Send } from 'lucide-react';
 import { getInitialLabel } from '../lib/initials';
+import { sanitizeWordInput } from '../lib/validation';
 import type { Initial } from '../types/app';
 
 type WordSubmitPanelProps = {
@@ -61,7 +62,7 @@ export function WordSubmitPanel({ selectedInitial, initialWord = '', submitLabel
         <input
           id="word-input"
           value={word}
-          onChange={(event) => setWord(event.target.value)}
+          onChange={(event) => setWord(sanitizeWordInput(event.target.value))}
           disabled={!selectedInitial || disabled || isSubmitting}
           placeholder={selectedInitial ? '낱말' : '빈 칸'}
           autoComplete="off"

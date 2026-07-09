@@ -4,7 +4,8 @@ import { acceptsWordInitial, getInitialFromWord, getInitialPrompt } from './init
 const BAD_WORDS = ['씨발', '시발', '병신', '바보', '멍청이', '꺼져', '죽어', '똥개', '좆', 'ㅅㅂ'];
 const JAMO_ONLY = /^[ㄱ-ㅎㅏ-ㅣ]+$/;
 const NUMBER_ONLY = /^\d+$/;
-const SPECIAL_ONLY = /^[^\p{L}\p{N}]+$/u;
+const SPECIAL_CHARACTER = /[^\p{L}\p{N}]/u;
+const SPECIAL_CHARACTERS = /[^\p{L}\p{N}]/gu;
 
 export type WordValidationResult =
   | { ok: true; word: string }
@@ -12,6 +13,10 @@ export type WordValidationResult =
 
 function normalizeForComparison(value: string): string {
   return value.trim().replace(/\s+/g, '');
+}
+
+export function sanitizeWordInput(input: string): string {
+  return input.replace(SPECIAL_CHARACTERS, '');
 }
 
 export function validateWord(input: string, selectedInitial: Initial, topic = ''): WordValidationResult {
@@ -30,8 +35,8 @@ export function validateWord(input: string, selectedInitial: Initial, topic = ''
     return { ok: false, message: '숫자만 쓸 수 없어요.' };
   }
 
-  if (SPECIAL_ONLY.test(word)) {
-    return { ok: false, message: '낱말을 입력해 주세요.' };
+  if (SPECIAL_CHARACTER.test(word)) {
+    return { ok: false, message: '특수 문자는 쓸 수 없어요.' };
   }
 
   if ([...word].length > 8) {
