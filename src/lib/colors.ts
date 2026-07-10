@@ -1,4 +1,5 @@
 import type { StudentNumber } from '../types/app';
+import { getTodayDateKey } from './date';
 
 const STUDENT_COLORS = [
   '#E76F51',
@@ -26,11 +27,56 @@ const STUDENT_COLORS = [
   '#52796F',
 ] as const;
 
-const LIGHT_TEXT_STUDENTS = new Set<StudentNumber>([2, 5, 6, 7, 8, 14, 16, 20, 23]);
 const FALLBACK_STUDENT_COLOR = '#e9ecef';
+const DARK_TEXT = 'var(--ink)';
+const LIGHT_TEXT = 'var(--canvas)';
+
+function hashDateKey(dateKey: string): number {
+  let hash = 2166136261;
+
+  for (const character of dateKey) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function nextSeed(seed: number): number {
+  return (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+}
+
+function getDailyStudentColors(dateKey: string): readonly string[] {
+  const colors = [...STUDENT_COLORS];
+  let seed = hashDateKey(dateKey);
+
+  for (let index = colors.length - 1; index > 0; index -= 1) {
+    seed = nextSeed(seed);
+    const targetIndex = seed % (index + 1);
+    const color = colors[index];
+    const targetColor = colors[targetIndex];
+
+    if (color === undefined || targetColor === undefined) {
+      return colors;
+    }
+
+    colors[index] = targetColor;
+    colors[targetIndex] = color;
+  }
+
+  return colors;
+}
+
+function getRelativeLuminance(color: string): number {
+  const red = Number.parseInt(color.slice(1, 3), 16);
+  const green = Number.parseInt(color.slice(3, 5), 16);
+  const blue = Number.parseInt(color.slice(5, 7), 16);
+
+  return (red * 299 + green * 587 + blue * 114) / 1000;
+}
 
 function getStudentColorToken(studentNumber: StudentNumber) {
-  return STUDENT_COLORS[studentNumber - 1] ?? FALLBACK_STUDENT_COLOR;
+  return getDailyStudentColors(getTodayDateKey())[studentNumber - 1] ?? FALLBACK_STUDENT_COLOR;
 }
 
 export function getStudentColor(studentNumber: StudentNumber): string {
@@ -42,5 +88,5 @@ export function getStudentBorderColor(studentNumber: StudentNumber): string {
 }
 
 export function getStudentTextColor(studentNumber: StudentNumber): string {
-  return LIGHT_TEXT_STUDENTS.has(studentNumber) ? 'var(--canvas)' : 'var(--ink)';
+  return getRelativeLuminance(getStudentColorToken(studentNumber)) < 128 ? LIGHT_TEXT : DARK_TEXT;
 }
