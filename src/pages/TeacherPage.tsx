@@ -19,6 +19,8 @@ type TeacherPageProps = {
   onChangeNumber: () => void;
 };
 
+const TEACHER_SESSION_EXPIRED_MESSAGE = '다시 로그인해 주세요.';
+
 export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
   const todayDate = useMemo(() => getTodayDateKey(), []);
   const [token, setToken] = useState<string | null>(() => getTeacherToken());
@@ -110,9 +112,28 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     onChangeNumber();
   }
 
+  async function refreshTeacherSession(): Promise<string | null> {
+    clearTeacherToken();
+    setIsCreatingSession(true);
+
+    const result = await loginTeacher();
+    setIsCreatingSession(false);
+
+    if (result.error || !result.data) {
+      setToken(null);
+      setHasTriedSession(false);
+      setLoadError(result.error ?? '교사용 화면으로 다시 들어갈 수 없습니다.');
+      return null;
+    }
+
+    saveTeacherToken(result.data.token);
+    setToken(result.data.token);
+    return result.data.token;
+  }
+
   async function handleTopicSave(topic: string): Promise<string | null> {
     if (!token) {
-      return '다시 로그인해 주세요.';
+      return TEACHER_SESSION_EXPIRED_MESSAGE;
     }
 
     if (shouldUseLocalData()) {
@@ -122,6 +143,21 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     }
 
     const result = await updateTopic(token, selectedDate, topic);
+    if (result.error === TEACHER_SESSION_EXPIRED_MESSAGE) {
+      const nextToken = await refreshTeacherSession();
+      if (!nextToken) {
+        return '다시 로그인한 뒤 다시 저장해 주세요.';
+      }
+
+      const retryResult = await updateTopic(nextToken, selectedDate, topic);
+      if (retryResult.error) {
+        return retryResult.error;
+      }
+
+      await fetchBoard();
+      return null;
+    }
+
     if (result.error) {
       return result.error;
     }
@@ -142,6 +178,23 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     }
 
     const result = await deleteEntry(token, entryId);
+    if (result.error === TEACHER_SESSION_EXPIRED_MESSAGE) {
+      const nextToken = await refreshTeacherSession();
+      if (!nextToken) {
+        setLoadError('다시 로그인한 뒤 다시 삭제해 주세요.');
+        return;
+      }
+
+      const retryResult = await deleteEntry(nextToken, entryId);
+      if (retryResult.error) {
+        setLoadError(retryResult.error);
+        return;
+      }
+
+      await fetchBoard();
+      return;
+    }
+
     if (result.error) {
       setLoadError(result.error);
       return;
@@ -162,6 +215,23 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     }
 
     const result = await deleteEntriesByDate(token, selectedDate);
+    if (result.error === TEACHER_SESSION_EXPIRED_MESSAGE) {
+      const nextToken = await refreshTeacherSession();
+      if (!nextToken) {
+        setLoadError('다시 로그인한 뒤 다시 삭제해 주세요.');
+        return;
+      }
+
+      const retryResult = await deleteEntriesByDate(nextToken, selectedDate);
+      if (retryResult.error) {
+        setLoadError(retryResult.error);
+        return;
+      }
+
+      await fetchBoard();
+      return;
+    }
+
     if (result.error) {
       setLoadError(result.error);
       return;
