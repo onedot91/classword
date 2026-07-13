@@ -3,6 +3,8 @@ import { getErrorMessage, getString, isRecord, jsonResponse, parseRound, readJso
 
 export const config = { runtime: 'edge' };
 
+const UUID_TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 type TeacherAction =
   | { readonly action: 'login' }
   | { readonly action: 'updateTopic'; readonly token: string; readonly date: string; readonly topic: string }
@@ -46,6 +48,10 @@ function parseTeacherAction(body: unknown): TeacherAction | null {
 }
 
 async function validateTeacherToken(token: string): Promise<boolean> {
+  if (!UUID_TOKEN_PATTERN.test(token)) {
+    return false;
+  }
+
   const sql = getSql();
   const rows = await sql`
     select token::text

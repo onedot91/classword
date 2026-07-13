@@ -3,6 +3,7 @@ import { deleteLocalEntriesByDate, deleteLocalEntry, upsertLocalRound } from './
 import { enableLocalDataFallback, isApiMissingMessage, isRemoteBackendConfigured, postAction, shouldUseLocalData } from './backend';
 
 const TEACHER_TOKEN_KEY = 'classword_teacher_token';
+const UUID_TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function createLocalTeacherSession(): TeacherActionResponse<TeacherSession> {
   return {
@@ -23,7 +24,7 @@ async function callTeacherAction<T>(action: string, payload: Record<string, unkn
 
 export function getTeacherToken(): string | null {
   const token = localStorage.getItem(TEACHER_TOKEN_KEY);
-  if (isRemoteBackendConfigured && token?.startsWith('local-')) {
+  if (isRemoteBackendConfigured && token && !UUID_TOKEN_PATTERN.test(token)) {
     localStorage.removeItem(TEACHER_TOKEN_KEY);
     return null;
   }
