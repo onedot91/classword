@@ -5,6 +5,7 @@ import type { Entry, Initial, WordQuiz } from '../types/app';
 
 const GOMA_VIEWPORT_PADDING = 12;
 const DRAG_THRESHOLD = 4;
+const SPEECH_HIDE_DELAY_MS = 4500;
 
 type GomaNotifierProps = {
   remainingCount: number;
@@ -208,29 +209,27 @@ export function GomaNotifier({
   const gomaButtonRef = useRef<HTMLButtonElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const suppressClickRef = useRef(false);
+  const messageSignature = messages.join('\n');
+  const currentMessage = messages[messageIndex] ?? '';
 
   useEffect(() => {
     setMessageIndex(0);
     setIsSpeechVisible(true);
-  }, [messages]);
+  }, [messageSignature]);
 
   useEffect(() => {
+    if (!isSpeechVisible) {
+      return undefined;
+    }
+
     const hideTimerId = window.setTimeout(() => {
       setIsSpeechVisible(false);
-    }, 9000);
-
-    const nextTimerId = window.setTimeout(() => {
-      if (messages.length > 1) {
-        setMessageIndex((currentIndex) => (currentIndex + 1) % messages.length);
-      }
-      setIsSpeechVisible(true);
-    }, 18000);
+    }, SPEECH_HIDE_DELAY_MS);
 
     return () => {
       window.clearTimeout(hideTimerId);
-      window.clearTimeout(nextTimerId);
     };
-  }, [messageIndex, messages]);
+  }, [currentMessage, isSpeechVisible]);
 
   useEffect(() => {
     function handleResize() {
@@ -344,7 +343,7 @@ export function GomaNotifier({
       {isSpeechVisible ? (
         <div className="goma-speech" role="status" aria-live="polite">
           <i className="goma-speech-stitch" aria-hidden="true" />
-          <span className="goma-speech-text">{messages[messageIndex]}</span>
+          <span className="goma-speech-text">{currentMessage}</span>
         </div>
       ) : (
         <div className="goma-speech-placeholder" aria-hidden="true" />
