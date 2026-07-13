@@ -85,6 +85,41 @@ export type Database = {
         };
         Relationships: [];
       };
+      word_quizzes: {
+        Row: {
+          round_date: string;
+          initial: Initial;
+          answer: string;
+          meaning: string;
+          example_sentence: string;
+          updated_at: string;
+        };
+        Insert: {
+          round_date: string;
+          initial: Initial;
+          answer: string;
+          meaning: string;
+          example_sentence: string;
+          updated_at?: string;
+        };
+        Update: {
+          round_date?: string;
+          initial?: Initial;
+          answer?: string;
+          meaning?: string;
+          example_sentence?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'word_quizzes_round_date_fkey';
+            columns: ['round_date'];
+            isOneToOne: true;
+            referencedRelation: 'rounds';
+            referencedColumns: ['round_date'];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

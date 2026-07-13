@@ -1,22 +1,25 @@
 import { AlertTriangle, LogOut, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { INITIALS } from '../lib/initials';
-import type { Entry, Round } from '../types/app';
+import type { Entry, Round, WordQuiz } from '../types/app';
 import { ConfettiComplete } from './ConfettiComplete';
 import { InitialGrid } from './InitialGrid';
 import { TopicDatePicker } from './TopicDatePicker';
 import { TopicEditor } from './TopicEditor';
+import { WordQuizEditor } from './WordQuizEditor';
 
 type TeacherDashboardProps = {
   selectedDate: string;
   todayDate: string;
   round: Round | null;
+  wordQuiz: WordQuiz | null;
   savedTopics: string[];
   topicDates: string[];
   entries: Entry[];
   completedCount: number;
   onDateChange: (date: string) => void;
   onTopicSave: (topic: string) => Promise<string | null>;
+  onWordQuizSave: (answer: string, meaning: string, exampleSentence: string) => Promise<string | null>;
   onDeleteEntry: (entryId: string) => void;
   onDeleteAllEntries: () => void;
   onLogout: () => void;
@@ -26,12 +29,14 @@ export function TeacherDashboard({
   selectedDate,
   todayDate,
   round,
+  wordQuiz,
   savedTopics,
   topicDates,
   entries,
   completedCount,
   onDateChange,
   onTopicSave,
+  onWordQuizSave,
   onDeleteEntry,
   onDeleteAllEntries,
   onLogout,
@@ -82,6 +87,8 @@ export function TeacherDashboard({
           <InitialGrid entries={entries} teacherMode onDelete={onDeleteEntry} />
         </section>
       </div>
+
+      <WordQuizEditor wordQuiz={wordQuiz} onSave={onWordQuizSave} />
 
       {deleteConfirmStep > 0 ? (
         <div className="delete-confirm-backdrop" role="presentation">

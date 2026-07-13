@@ -1,7 +1,28 @@
 import { getSql } from './_db';
-import { getErrorMessage, jsonResponse, parseEntry, parseRound, parseSavedRound, rowsFrom } from './_http';
+import { getDefaultWordQuiz } from '../src/lib/wordQuiz';
+import { getErrorMessage, getPostgresErrorCode, jsonResponse, parseEntry, parseRound, parseSavedRound, parseWordQuiz, rowsFrom } from './_http';
 
 export const config = { runtime: 'edge' };
+
+async function getWordQuiz(date: string) {
+  try {
+    const sql = getSql();
+    const rows = await sql`
+      select round_date::text, initial, answer, meaning, example_sentence, updated_at::text
+      from word_quizzes
+      where round_date = ${date}
+      limit 1
+    `;
+    const quizRows = rowsFrom(rows);
+    return quizRows[0] ? parseWordQuiz(quizRows[0]) : getDefaultWordQuiz(date);
+  } catch (error) {
+    if (getPostgresErrorCode(error) === '42P01' || getPostgresErrorCode(error) === '42703') {
+      return getDefaultWordQuiz(date);
+    }
+
+    throw error;
+  }
+}
 
 export default async function handler(request: Request): Promise<Response> {
   if (request.method !== 'GET') {
@@ -16,7 +37,7 @@ export default async function handler(request: Request): Promise<Response> {
     }
 
     const sql = getSql();
-    const [roundRows, entryRows, savedRoundRows] = await Promise.all([
+    const [roundRows, entryRows, savedRoundRows, wordQuiz] = await Promise.all([
       sql`
         select id::text, round_date::text, topic, created_at::text, updated_at::text
         from rounds
@@ -34,6 +55,7 @@ export default async function handler(request: Request): Promise<Response> {
         from rounds
         order by round_date desc
       `,
+      getWordQuiz(date),
     ]);
 
     const rounds = rowsFrom(roundRows);
@@ -41,7 +63,7 @@ export default async function handler(request: Request): Promise<Response> {
     const savedRounds = rowsFrom(savedRoundRows).map(parseSavedRound);
     const round = rounds[0] ? parseRound(rounds[0]) : null;
 
-    return jsonResponse({ data: { round, entries, savedRounds } });
+    return jsonResponse({ data: { round, entries, savedRounds, wordQuiz } });
   } catch (error) {
     return jsonResponse({ error: getErrorMessage(error) }, 500);
   }

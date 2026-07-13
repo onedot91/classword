@@ -13,6 +13,7 @@ import {
   rowsFrom,
 } from './_http';
 import { validateWord } from '../src/lib/validation';
+import { getDefaultWordQuiz, isCorrectQuizAnswer } from '../src/lib/wordQuiz';
 
 export const config = { runtime: 'edge' };
 
@@ -31,7 +32,13 @@ type DeleteEntryAction = {
   readonly studentNumber: StudentNumber;
 };
 
-type StudentAction = SubmitEntryAction | DeleteEntryAction;
+type SubmitQuizAction = {
+  readonly action: 'submitQuiz';
+  readonly date: string;
+  readonly answer: string;
+};
+
+type StudentAction = SubmitEntryAction | DeleteEntryAction | SubmitQuizAction;
 
 function parseStudentAction(body: unknown): StudentAction | null {
   if (!isRecord(body) || typeof body.action !== 'string') {
@@ -62,6 +69,14 @@ function parseStudentAction(body: unknown): StudentAction | null {
     }
 
     return { action: 'deleteEntry', entryId: body.entryId, studentNumber };
+  }
+
+  if (body.action === 'submitQuiz') {
+    if (typeof body.date !== 'string' || typeof body.answer !== 'string') {
+      return null;
+    }
+
+    return { action: 'submitQuiz', date: body.date, answer: body.answer };
   }
 
   return null;
@@ -172,6 +187,28 @@ async function deleteEntry(action: DeleteEntryAction): Promise<Response> {
   return jsonResponse({ data: { id: action.entryId } });
 }
 
+async function submitQuiz(action: SubmitQuizAction): Promise<Response> {
+  let answer = getDefaultWordQuiz(action.date).answer;
+
+  try {
+    const sql = getSql();
+    const quizRows = await sql`
+      select answer
+      from word_quizzes
+      where round_date = ${action.date}
+      limit 1
+    `;
+    const rows = rowsFrom(quizRows);
+    answer = rows[0] ? getString(rows[0], 'answer') : answer;
+  } catch (error) {
+    if (getPostgresErrorCode(error) !== '42P01') {
+      throw error;
+    }
+  }
+
+  return jsonResponse({ data: { correct: isCorrectQuizAnswer(action.answer, answer) } });
+}
+
 export default async function handler(request: Request): Promise<Response> {
   if (request.method !== 'POST') {
     return jsonResponse({ error: '지원하지 않는 요청입니다.' }, 405);
@@ -185,6 +222,10 @@ export default async function handler(request: Request): Promise<Response> {
 
     if (action.action === 'submitEntry') {
       return submitEntry(action);
+    }
+
+    if (action.action === 'submitQuiz') {
+      return submitQuiz(action);
     }
 
     return deleteEntry(action);

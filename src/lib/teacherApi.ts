@@ -1,5 +1,5 @@
-import type { Round, TeacherActionResponse, TeacherSession } from '../types/app';
-import { deleteLocalEntriesByDate, deleteLocalEntry, upsertLocalRound } from './localData';
+import type { Round, TeacherActionResponse, TeacherSession, WordQuiz } from '../types/app';
+import { deleteLocalEntriesByDate, deleteLocalEntry, upsertLocalRound, upsertLocalWordQuiz } from './localData';
 import { enableLocalDataFallback, isApiMissingMessage, isRemoteBackendConfigured, postAction, shouldUseLocalData } from './backend';
 
 const TEACHER_TOKEN_KEY = 'classword_teacher_token';
@@ -63,6 +63,26 @@ export async function updateTopic(token: string, date: string, topic: string): P
   if (result.error && shouldFallbackToLocalData(result.error)) {
     enableLocalDataFallback();
     return { data: upsertLocalRound(date, topic) };
+  }
+
+  return result;
+}
+
+export async function updateWordQuiz(
+  token: string,
+  date: string,
+  answer: string,
+  meaning: string,
+  exampleSentence: string,
+): Promise<TeacherActionResponse<WordQuiz>> {
+  if (shouldUseLocalData()) {
+    return { data: upsertLocalWordQuiz(date, answer, meaning, exampleSentence) };
+  }
+
+  const result = await callTeacherAction<WordQuiz>('updateWordQuiz', { token, date, answer, meaning, exampleSentence });
+  if (result.error && shouldFallbackToLocalData(result.error)) {
+    enableLocalDataFallback();
+    return { data: upsertLocalWordQuiz(date, answer, meaning, exampleSentence) };
   }
 
   return result;

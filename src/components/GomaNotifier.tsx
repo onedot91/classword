@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent, PointerEvent } from 'react';
 import { getInitialLabel } from '../lib/initials';
-import type { Entry, Initial } from '../types/app';
+import type { Entry, Initial, WordQuiz } from '../types/app';
 
 const GOMA_VIEWPORT_PADDING = 12;
 const DRAG_THRESHOLD = 4;
@@ -11,6 +11,8 @@ type GomaNotifierProps = {
   selectedInitial: Initial | null;
   submittedEntry?: Entry;
   submitMessage?: string;
+  wordQuiz?: WordQuiz | null;
+  quizFeedback?: 'correct' | 'incorrect' | null;
   isLoading?: boolean;
   loadError?: string;
   complete?: boolean;
@@ -32,6 +34,21 @@ type DragState = {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function getObjectParticle(word: string): '을' | '를' {
+  const trimmedWord = word.trim();
+  const lastCharacter = trimmedWord[trimmedWord.length - 1];
+  if (!lastCharacter) {
+    return '를';
+  }
+
+  const code = lastCharacter.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) {
+    return '를';
+  }
+
+  return (code - 0xac00) % 28 === 0 ? '를' : '을';
 }
 
 function clampPosition(position: GomaPosition, element?: HTMLElement | null, dragHandle?: HTMLElement | null): GomaPosition {
@@ -57,6 +74,8 @@ export function GomaNotifier({
   selectedInitial,
   submittedEntry,
   submitMessage,
+  wordQuiz,
+  quizFeedback,
   isLoading,
   loadError,
   complete,
@@ -83,6 +102,28 @@ export function GomaNotifier({
         '초성과 낱말이 잘 맞는지 다시 확인해 볼까?',
         '괜찮아. 한 번 더 생각하면 더 좋은 낱말이 떠오를 거야.',
         '주제와 어울리는 낱말인지 천천히 다시 봐 줘.',
+      ];
+    }
+
+    if (quizFeedback === 'correct' && wordQuiz) {
+      return [
+        `좋아, ${wordQuiz.answer}${getObjectParticle(wordQuiz.answer)} 정확히 맞혔어.`,
+        '뜻과 예문까지 함께 보면 낱말이 더 오래 기억돼.',
+        '정답을 맞힌 뒤에는 그 낱말로 짧은 문장을 만들어 봐.',
+        `${wordQuiz.answer}와 비슷한 뜻을 가진 말도 떠올려 볼까?`,
+        '초성, 뜻, 예문을 연결해서 생각한 게 아주 좋아.',
+        '새 낱말을 알게 됐으니 오늘 주제와도 이어 봐.',
+      ];
+    }
+
+    if (quizFeedback === 'incorrect' && wordQuiz) {
+      return [
+        `초성 ${wordQuiz.initial_hint}를 다시 천천히 읽어 봐.`,
+        '뜻과 예문을 함께 보면 정답에 더 가까워질 수 있어.',
+        '예문의 빈칸에 들어가도 자연스러운 낱말인지 확인해 봐.',
+        '첫 생각이 틀려도 괜찮아. 단서가 하나 더 생긴 거야.',
+        '정답 낱말의 글자 수와 초성을 같이 살펴봐.',
+        '뜻을 소리 내어 읽고 어울리는 낱말을 떠올려 봐.',
       ];
     }
 
@@ -137,6 +178,9 @@ export function GomaNotifier({
 
     return [
       `지금 현재 ${remainingCount}개 남았어.`,
+      wordQuiz ? `낱말 퀴즈 초성은 ${wordQuiz.initial_hint}야. 뜻과 예문을 같이 봐.` : '빈 칸을 눌러 초성을 고르고 낱말을 등록해 줘.',
+      wordQuiz ? '퀴즈가 막히면 예문의 빈칸에 낱말을 넣어 읽어 봐.' : '친구들이 아직 쓰지 않은 낱말을 찾아 봐.',
+      wordQuiz ? '뜻은 낱말의 중심이고, 예문은 낱말이 쓰이는 자리야.' : '작은 생각 하나가 모두의 배움을 크게 만들어.',
       '빈 칸을 눌러 초성을 고르고 낱말을 등록해 줘.',
       '친구들이 아직 쓰지 않은 낱말을 찾아 봐.',
       '작은 생각 하나가 모두의 배움을 크게 만들어.',
@@ -154,7 +198,7 @@ export function GomaNotifier({
       '처음 떠오른 생각도 소중해. 한번 적어 볼까?',
       '우리 반 낱말판에 네 아이디어를 붙여 줘.',
     ];
-  }, [complete, isLoading, loadError, remainingCount, selectedInitial, submitMessage, submittedEntry]);
+  }, [complete, isLoading, loadError, quizFeedback, remainingCount, selectedInitial, submitMessage, submittedEntry, wordQuiz]);
 
   const [messageIndex, setMessageIndex] = useState(0);
   const [isSpeechVisible, setIsSpeechVisible] = useState(true);

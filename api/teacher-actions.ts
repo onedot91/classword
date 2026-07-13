@@ -1,5 +1,6 @@
 import { getSql } from './_db';
 import { getErrorMessage, getString, isRecord, jsonResponse, parseRound, readJsonBody, rowsFrom } from './_http';
+import { getQuizInitial, getQuizInitialHint } from '../src/lib/wordQuiz';
 
 export const config = { runtime: 'edge' };
 
@@ -8,6 +9,7 @@ const UUID_TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-
 type TeacherAction =
   | { readonly action: 'login' }
   | { readonly action: 'updateTopic'; readonly token: string; readonly date: string; readonly topic: string }
+  | { readonly action: 'updateWordQuiz'; readonly token: string; readonly date: string; readonly answer: string; readonly meaning: string; readonly exampleSentence: string }
   | { readonly action: 'deleteEntry'; readonly token: string; readonly entryId: string }
   | { readonly action: 'deleteEntriesByDate'; readonly token: string; readonly date: string };
 
@@ -34,6 +36,27 @@ function parseTeacherAction(body: unknown): TeacherAction | null {
     }
 
     return { action: 'deleteEntry', token: body.token, entryId: body.entryId };
+  }
+
+  if (body.action === 'updateWordQuiz') {
+    if (
+      typeof body.token !== 'string' ||
+      typeof body.date !== 'string' ||
+      typeof body.answer !== 'string' ||
+      typeof body.meaning !== 'string' ||
+      typeof body.exampleSentence !== 'string'
+    ) {
+      return null;
+    }
+
+    return {
+      action: 'updateWordQuiz',
+      token: body.token,
+      date: body.date,
+      answer: body.answer,
+      meaning: body.meaning,
+      exampleSentence: body.exampleSentence,
+    };
   }
 
   if (body.action === 'deleteEntriesByDate') {
@@ -100,6 +123,52 @@ async function updateTopic(action: Extract<TeacherAction, { readonly action: 'up
   return jsonResponse({ data: round });
 }
 
+async function updateWordQuiz(action: Extract<TeacherAction, { readonly action: 'updateWordQuiz' }>): Promise<Response> {
+  const answer = action.answer.trim();
+  const meaning = action.meaning.trim();
+  const exampleSentence = action.exampleSentence.trim();
+  if (!answer || !meaning || !exampleSentence) {
+    return jsonResponse({ error: '낱말, 뜻, 예문을 모두 입력해 주세요.' }, 400);
+  }
+
+  const sql = getSql();
+  const initial = getQuizInitial(answer);
+  await sql`
+    insert into rounds (round_date, topic)
+    values (${action.date}, '')
+    on conflict (round_date) do nothing
+  `;
+  const rows = await sql`
+    insert into word_quizzes (round_date, initial, answer, meaning, example_sentence)
+    values (${action.date}, ${initial}, ${answer}, ${meaning}, ${exampleSentence})
+    on conflict (round_date)
+    do update set
+      initial = excluded.initial,
+      answer = excluded.answer,
+      meaning = excluded.meaning,
+      example_sentence = excluded.example_sentence
+    returning round_date::text, initial, answer, meaning, example_sentence, updated_at::text
+  `;
+  const quizRows = rowsFrom(rows);
+  const quizRow = quizRows[0] ?? null;
+
+  if (!quizRow) {
+    return jsonResponse({ error: '낱말 퀴즈를 저장할 수 없습니다.' }, 500);
+  }
+
+  return jsonResponse({
+    data: {
+      round_date: getString(quizRow, 'round_date'),
+      initial: getString(quizRow, 'initial'),
+      initial_hint: getQuizInitialHint(getString(quizRow, 'answer')),
+      answer: getString(quizRow, 'answer'),
+      meaning: getString(quizRow, 'meaning'),
+      example_sentence: getString(quizRow, 'example_sentence'),
+      updated_at: getString(quizRow, 'updated_at'),
+    },
+  });
+}
+
 async function deleteEntry(entryId: string): Promise<Response> {
   const sql = getSql();
   await sql`
@@ -141,6 +210,10 @@ export default async function handler(request: Request): Promise<Response> {
 
     if (action.action === 'updateTopic') {
       return updateTopic(action);
+    }
+
+    if (action.action === 'updateWordQuiz') {
+      return updateWordQuiz(action);
     }
 
     if (action.action === 'deleteEntry') {

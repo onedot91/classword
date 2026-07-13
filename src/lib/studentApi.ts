@@ -1,6 +1,7 @@
 import type { Entry, Initial, StudentNumber, TeacherActionResponse } from '../types/app';
-import { deleteLocalEntry, insertLocalEntry, updateLocalEntry } from './localData';
+import { deleteLocalEntry, getLocalWordQuiz, insertLocalEntry, updateLocalEntry } from './localData';
 import { enableLocalDataFallback, isApiMissingMessage, isRemoteBackendConfigured, postAction } from './backend';
+import { isCorrectQuizAnswer } from './wordQuiz';
 
 async function callStudentAction<T>(action: string, payload: Record<string, unknown>): Promise<TeacherActionResponse<T>> {
   return postAction<T>('/api/student-actions', { action, ...payload });
@@ -44,4 +45,18 @@ export async function deleteStudentEntry(entryId: string, studentNumber: Student
   enableLocalDataFallback();
   deleteLocalEntry(entryId);
   return { data: { id: entryId } };
+}
+
+export async function submitWordQuizAnswer(date: string, answer: string): Promise<TeacherActionResponse<{ correct: boolean }>> {
+  const result = await callStudentAction<{ correct: boolean }>('submitQuiz', { date, answer });
+  if (!result.error || !isApiMissingMessage(result.error)) {
+    return result;
+  }
+
+  if (isRemoteBackendConfigured) {
+    return result;
+  }
+
+  enableLocalDataFallback();
+  return { data: { correct: isCorrectQuizAnswer(answer, getLocalWordQuiz(date).answer) } };
 }

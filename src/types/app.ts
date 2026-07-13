@@ -60,6 +60,16 @@ export type Entry = {
   created_at: string;
 };
 
+export type WordQuiz = {
+  round_date: string;
+  initial: Initial;
+  initial_hint: string;
+  answer: string;
+  meaning: string;
+  example_sentence: string;
+  updated_at?: string;
+};
+
 export type DailyBoardState = {
   date: string;
   topic: string;

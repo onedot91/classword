@@ -3,15 +3,17 @@ import { ConfettiComplete } from '../components/ConfettiComplete';
 import { GomaNotifier } from '../components/GomaNotifier';
 import { InitialGrid } from '../components/InitialGrid';
 import { StudentBadge } from '../components/StudentBadge';
+import { WordQuizPanel } from '../components/WordQuizPanel';
 import { getTodayDateKey } from '../lib/date';
 import { INITIALS } from '../lib/initials';
-import { deleteLocalEntry, getLocalEntries, getLocalRound, insertLocalEntry, updateLocalEntry } from '../lib/localData';
+import { deleteLocalEntry, getLocalEntries, getLocalRound, getLocalWordQuiz, insertLocalEntry, updateLocalEntry } from '../lib/localData';
 import { useRealtimeBoard } from '../lib/realtime';
 import { playSound } from '../lib/sound';
-import { deleteStudentEntry, submitStudentEntry } from '../lib/studentApi';
+import { deleteStudentEntry, submitStudentEntry, submitWordQuizAnswer } from '../lib/studentApi';
 import { getBoard, shouldUseLocalData } from '../lib/backend';
 import { validateWord } from '../lib/validation';
-import type { Entry, Initial, Round, StudentNumber } from '../types/app';
+import { isCorrectQuizAnswer } from '../lib/wordQuiz';
+import type { Entry, Initial, Round, StudentNumber, WordQuiz } from '../types/app';
 
 type StudentPageProps = {
   studentNumber: StudentNumber;
@@ -21,12 +23,14 @@ type StudentPageProps = {
 export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps) {
   const todayDate = useMemo(() => getTodayDateKey(), []);
   const [round, setRound] = useState<Round | null>(null);
+  const [wordQuiz, setWordQuiz] = useState<WordQuiz | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedInitial, setSelectedInitial] = useState<Initial | null>(null);
   const [draftWord, setDraftWord] = useState('');
   const [pendingWord, setPendingWord] = useState('');
   const [celebrationInitial, setCelebrationInitial] = useState<Initial | null>(null);
   const [submitMessage, setSubmitMessage] = useState('');
+  const [quizFeedback, setQuizFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -36,6 +40,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
 
     if (shouldUseLocalData()) {
       setRound(getLocalRound(todayDate));
+      setWordQuiz(getLocalWordQuiz(todayDate));
       setEntries(getLocalEntries(todayDate));
       setIsLoading(false);
       return;
@@ -49,6 +54,7 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
     }
 
     setRound(result.data.round);
+    setWordQuiz(result.data.wordQuiz);
     setEntries([...result.data.entries]);
     setIsLoading(false);
   }, [todayDate]);
@@ -56,6 +62,10 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
   useEffect(() => {
     void fetchBoard();
   }, [fetchBoard]);
+
+  useEffect(() => {
+    setQuizFeedback(null);
+  }, [studentNumber, wordQuiz?.round_date, wordQuiz?.answer]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -210,6 +220,19 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
     await fetchBoard();
   }
 
+  async function handleWordQuizSubmit(answer: string): Promise<boolean | null> {
+    if (shouldUseLocalData()) {
+      const correct = isCorrectQuizAnswer(answer, getLocalWordQuiz(todayDate).answer);
+      setQuizFeedback(correct ? 'correct' : 'incorrect');
+      return correct;
+    }
+
+    const result = await submitWordQuizAnswer(todayDate, answer);
+    const correct = result.data?.correct ?? null;
+    setQuizFeedback(correct === null ? 'incorrect' : correct ? 'correct' : 'incorrect');
+    return correct;
+  }
+
   return (
     <main className="app-shell student-shell">
       <header className="app-header">
@@ -251,11 +274,15 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
         />
       </section>
 
+      <WordQuizPanel wordQuiz={wordQuiz} studentNumber={studentNumber} onSubmit={handleWordQuizSubmit} />
+
       <GomaNotifier
         remainingCount={remainingCount}
         selectedInitial={selectedInitial}
         submittedEntry={submittedEntry}
         submitMessage={submitMessage}
+        wordQuiz={wordQuiz}
+        quizFeedback={quizFeedback}
         isLoading={isLoading}
         loadError={loadError}
         complete={complete}

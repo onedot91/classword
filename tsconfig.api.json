@@ -11,5 +11,5 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["api", "src/lib/initials.ts", "src/lib/validation.ts", "src/types/app.ts"]
+  "include": ["api", "src/lib/initials.ts", "src/lib/validation.ts", "src/lib/wordQuiz.ts", "src/types/app.ts"]
 }

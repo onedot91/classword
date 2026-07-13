@@ -1,7 +1,9 @@
-import type { Entry, Initial, Round, StudentNumber } from '../types/app';
+import type { Entry, Initial, Round, StudentNumber, WordQuiz } from '../types/app';
+import { getDefaultWordQuiz, getQuizInitial, getQuizInitialHint } from './wordQuiz';
 
 const LOCAL_ROUNDS_KEY = 'classword_local_rounds';
 const LOCAL_ENTRIES_KEY = 'classword_local_entries';
+const LOCAL_WORD_QUIZZES_KEY = 'classword_local_word_quizzes';
 export const LOCAL_BOARD_EVENT = 'classword-local-board-change';
 
 type LocalEntry = Entry;
@@ -35,6 +37,45 @@ export function getLocalRound(date: string): Round | null {
 
 export function getLocalRounds(): Round[] {
   return readJson<Round[]>(LOCAL_ROUNDS_KEY, []);
+}
+
+export function getLocalWordQuiz(date: string): WordQuiz {
+  const quizzes = readJson<WordQuiz[]>(LOCAL_WORD_QUIZZES_KEY, []);
+  const quiz = quizzes.find((item) => item.round_date === date);
+  if (!quiz) {
+    return getDefaultWordQuiz(date);
+  }
+
+  return {
+    ...quiz,
+    example_sentence: quiz.example_sentence ?? '',
+  };
+}
+
+export function upsertLocalWordQuiz(date: string, answer: string, meaning: string, exampleSentence: string): WordQuiz {
+  const quizzes = readJson<WordQuiz[]>(LOCAL_WORD_QUIZZES_KEY, []);
+  const normalizedAnswer = answer.trim();
+  const normalizedMeaning = meaning.trim();
+  const normalizedExampleSentence = exampleSentence.trim();
+  const nextQuiz: WordQuiz = {
+    round_date: date,
+    initial: getQuizInitial(normalizedAnswer),
+    initial_hint: getQuizInitialHint(normalizedAnswer),
+    answer: normalizedAnswer,
+    meaning: normalizedMeaning,
+    example_sentence: normalizedExampleSentence,
+    updated_at: new Date().toISOString(),
+  };
+  const existingIndex = quizzes.findIndex((quiz) => quiz.round_date === date);
+
+  if (existingIndex >= 0) {
+    quizzes[existingIndex] = nextQuiz;
+  } else {
+    quizzes.push(nextQuiz);
+  }
+
+  writeJson(LOCAL_WORD_QUIZZES_KEY, quizzes);
+  return nextQuiz;
 }
 
 export function upsertLocalRound(date: string, topic: string): Round {

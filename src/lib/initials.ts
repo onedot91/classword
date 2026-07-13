@@ -47,6 +47,13 @@ export function getInitialFromWord(word: string): string | null {
   return CHOSEONG[initialIndex] ?? null;
 }
 
+export function getInitialsFromWord(word: string): string {
+  return [...word.trim()]
+    .map((char) => getInitialFromWord(char) ?? '')
+    .filter(Boolean)
+    .join('');
+}
+
 export function isSupportedInitial(value: string): value is Initial {
   return INITIALS.includes(value as Initial);
 }

@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TeacherDashboard } from '../components/TeacherDashboard';
 import { getTodayDateKey } from '../lib/date';
-import { deleteLocalEntriesByDate, deleteLocalEntry, getLocalEntries, getLocalRound, getLocalRounds, upsertLocalRound } from '../lib/localData';
+import {
+  deleteLocalEntriesByDate,
+  deleteLocalEntry,
+  getLocalEntries,
+  getLocalRound,
+  getLocalRounds,
+  getLocalWordQuiz,
+  upsertLocalRound,
+  upsertLocalWordQuiz,
+} from '../lib/localData';
 import { useRealtimeBoard } from '../lib/realtime';
 import { getBoard, shouldUseLocalData } from '../lib/backend';
 import {
@@ -12,8 +21,9 @@ import {
   loginTeacher,
   saveTeacherToken,
   updateTopic,
+  updateWordQuiz,
 } from '../lib/teacherApi';
-import type { Entry, Round } from '../types/app';
+import type { Entry, Round, WordQuiz } from '../types/app';
 
 type TeacherPageProps = {
   onChangeNumber: () => void;
@@ -26,6 +36,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
   const [token, setToken] = useState<string | null>(() => getTeacherToken());
   const [selectedDate, setSelectedDate] = useState(todayDate);
   const [round, setRound] = useState<Round | null>(null);
+  const [wordQuiz, setWordQuiz] = useState<WordQuiz | null>(null);
   const [savedTopics, setSavedTopics] = useState<string[]>([]);
   const [topicDates, setTopicDates] = useState<string[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -39,6 +50,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     if (shouldUseLocalData()) {
       const localRounds = getLocalRounds();
       setRound(getLocalRound(selectedDate));
+      setWordQuiz(getLocalWordQuiz(selectedDate));
       setSavedTopics(localRounds.map((localRound) => localRound.topic));
       setTopicDates(localRounds.filter((localRound) => localRound.topic.trim()).map((localRound) => localRound.round_date));
       setEntries(getLocalEntries(selectedDate));
@@ -53,6 +65,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
 
     const savedRounds = result.data.savedRounds;
     setRound(result.data.round);
+    setWordQuiz(result.data.wordQuiz);
     setEntries([...result.data.entries]);
     setSavedTopics(savedRounds.map((savedRound) => savedRound.topic));
     setTopicDates(savedRounds.filter((savedRound) => savedRound.topic.trim()).map((savedRound) => savedRound.round_date));
@@ -166,6 +179,43 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     return null;
   }
 
+  async function handleWordQuizSave(answer: string, meaning: string, exampleSentence: string): Promise<string | null> {
+    if (!token) {
+      return TEACHER_SESSION_EXPIRED_MESSAGE;
+    }
+
+    if (shouldUseLocalData()) {
+      setWordQuiz(upsertLocalWordQuiz(selectedDate, answer, meaning, exampleSentence));
+      await fetchBoard();
+      return null;
+    }
+
+    const result = await updateWordQuiz(token, selectedDate, answer, meaning, exampleSentence);
+    if (result.error === TEACHER_SESSION_EXPIRED_MESSAGE) {
+      const nextToken = await refreshTeacherSession();
+      if (!nextToken) {
+        return '다시 로그인한 뒤 다시 저장해 주세요.';
+      }
+
+      const retryResult = await updateWordQuiz(nextToken, selectedDate, answer, meaning, exampleSentence);
+      if (retryResult.error) {
+        return retryResult.error;
+      }
+
+      setWordQuiz(retryResult.data ?? null);
+      await fetchBoard();
+      return null;
+    }
+
+    if (result.error) {
+      return result.error;
+    }
+
+    setWordQuiz(result.data ?? null);
+    await fetchBoard();
+    return null;
+  }
+
   async function handleDeleteEntry(entryId: string) {
     if (!token || !window.confirm('삭제할까요?')) {
       return;
@@ -262,12 +312,14 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
         selectedDate={selectedDate}
         todayDate={todayDate}
         round={round}
+        wordQuiz={wordQuiz}
         savedTopics={savedTopics}
         topicDates={topicDates}
         entries={entries}
         completedCount={entries.length}
         onDateChange={setSelectedDate}
         onTopicSave={handleTopicSave}
+        onWordQuizSave={handleWordQuizSave}
         onDeleteEntry={handleDeleteEntry}
         onDeleteAllEntries={handleDeleteAllEntries}
         onLogout={handleLogout}

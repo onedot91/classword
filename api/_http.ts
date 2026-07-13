@@ -1,4 +1,5 @@
-import type { Entry, Initial, Round, StudentNumber } from '../src/types/app';
+import type { Entry, Initial, Round, StudentNumber, WordQuiz } from '../src/types/app';
+import { getQuizInitialHint } from '../src/lib/wordQuiz';
 
 export type ActionResponse<T> = {
   readonly data?: T;
@@ -9,6 +10,7 @@ export type BoardResponse = {
   readonly round: Round | null;
   readonly entries: readonly Entry[];
   readonly savedRounds: readonly Pick<Round, 'round_date' | 'topic'>[];
+  readonly wordQuiz: WordQuiz;
 };
 
 type Row = Record<string, unknown>;
@@ -145,6 +147,24 @@ export function parseSavedRound(row: Row): Pick<Round, 'round_date' | 'topic'> {
   return {
     round_date: getString(row, 'round_date'),
     topic: getString(row, 'topic'),
+  };
+}
+
+export function parseWordQuiz(row: Row): WordQuiz {
+  const initial = getInitial(row.initial);
+  const answer = getString(row, 'answer');
+  if (!initial) {
+    throw new Error('Invalid word quiz row');
+  }
+
+  return {
+    round_date: getString(row, 'round_date'),
+    initial,
+    initial_hint: getQuizInitialHint(answer),
+    answer,
+    meaning: getString(row, 'meaning'),
+    example_sentence: getString(row, 'example_sentence'),
+    updated_at: getString(row, 'updated_at'),
   };
 }
 

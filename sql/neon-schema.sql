@@ -47,6 +47,32 @@ create table if not exists teacher_sessions (
   created_at timestamptz not null default now()
 );
 
+create table if not exists word_quizzes (
+  round_date date primary key,
+  initial text not null,
+  answer text not null,
+  meaning text not null,
+  example_sentence text not null default '',
+  updated_at timestamptz not null default now(),
+
+  constraint word_quizzes_round_date_fkey
+    foreign key (round_date)
+    references rounds(round_date)
+    on delete cascade,
+
+  constraint word_quizzes_initial_check
+    check (initial in ('ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ')),
+
+  constraint word_quizzes_answer_not_blank_check
+    check (length(trim(answer)) > 0),
+
+  constraint word_quizzes_meaning_not_blank_check
+    check (length(trim(meaning)) > 0)
+);
+
+alter table word_quizzes
+  add column if not exists example_sentence text not null default '';
+
 create index if not exists entries_round_date_idx
   on entries(round_date);
 
@@ -58,6 +84,9 @@ create index if not exists entries_round_date_student_idx
 
 create index if not exists teacher_sessions_expires_at_idx
   on teacher_sessions(expires_at);
+
+create index if not exists word_quizzes_updated_at_idx
+  on word_quizzes(updated_at);
 
 create or replace function set_updated_at()
 returns trigger
@@ -72,6 +101,12 @@ $$;
 drop trigger if exists rounds_set_updated_at on rounds;
 create trigger rounds_set_updated_at
 before update on rounds
+for each row
+execute function set_updated_at();
+
+drop trigger if exists word_quizzes_set_updated_at on word_quizzes;
+create trigger word_quizzes_set_updated_at
+before update on word_quizzes
 for each row
 execute function set_updated_at();
 
