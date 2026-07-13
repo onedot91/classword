@@ -120,6 +120,32 @@ export type Database = {
           },
         ];
       };
+      word_quiz_solvers: {
+        Row: {
+          round_date: string;
+          student_number: StudentNumber;
+          solved_at: string;
+        };
+        Insert: {
+          round_date: string;
+          student_number: StudentNumber;
+          solved_at?: string;
+        };
+        Update: {
+          round_date?: string;
+          student_number?: StudentNumber;
+          solved_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'word_quiz_solvers_round_date_fkey';
+            columns: ['round_date'];
+            isOneToOne: false;
+            referencedRelation: 'rounds';
+            referencedColumns: ['round_date'];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

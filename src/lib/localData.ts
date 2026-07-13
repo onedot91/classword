@@ -1,9 +1,10 @@
-import type { Entry, Initial, Round, StudentNumber, WordQuiz } from '../types/app';
+import type { Entry, Initial, Round, StudentNumber, WordQuiz, WordQuizSolver } from '../types/app';
 import { getDefaultWordQuiz, getQuizInitial, getQuizInitialHint } from './wordQuiz';
 
 const LOCAL_ROUNDS_KEY = 'classword_local_rounds';
 const LOCAL_ENTRIES_KEY = 'classword_local_entries';
 const LOCAL_WORD_QUIZZES_KEY = 'classword_local_word_quizzes';
+const LOCAL_WORD_QUIZ_SOLVERS_KEY = 'classword_local_word_quiz_solvers';
 export const LOCAL_BOARD_EVENT = 'classword-local-board-change';
 
 type LocalEntry = Entry;
@@ -75,7 +76,36 @@ export function upsertLocalWordQuiz(date: string, answer: string, meaning: strin
   }
 
   writeJson(LOCAL_WORD_QUIZZES_KEY, quizzes);
+  writeJson(
+    LOCAL_WORD_QUIZ_SOLVERS_KEY,
+    readJson<WordQuizSolver[]>(LOCAL_WORD_QUIZ_SOLVERS_KEY, []).filter((solver) => solver.round_date !== date),
+  );
   return nextQuiz;
+}
+
+export function getLocalWordQuizSolvers(date: string): WordQuizSolver[] {
+  return readJson<WordQuizSolver[]>(LOCAL_WORD_QUIZ_SOLVERS_KEY, [])
+    .filter((solver) => solver.round_date === date)
+    .sort((a, b) => a.student_number - b.student_number);
+}
+
+export function upsertLocalWordQuizSolver(date: string, studentNumber: StudentNumber): WordQuizSolver {
+  const solvers = readJson<WordQuizSolver[]>(LOCAL_WORD_QUIZ_SOLVERS_KEY, []);
+  const existingIndex = solvers.findIndex((solver) => solver.round_date === date && solver.student_number === studentNumber);
+  const nextSolver: WordQuizSolver = {
+    round_date: date,
+    student_number: studentNumber,
+    solved_at: new Date().toISOString(),
+  };
+
+  if (existingIndex >= 0) {
+    solvers[existingIndex] = nextSolver;
+  } else {
+    solvers.push(nextSolver);
+  }
+
+  writeJson(LOCAL_WORD_QUIZ_SOLVERS_KEY, solvers);
+  return nextSolver;
 }
 
 export function upsertLocalRound(date: string, topic: string): Round {

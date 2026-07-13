@@ -36,6 +36,7 @@ type SubmitQuizAction = {
   readonly action: 'submitQuiz';
   readonly date: string;
   readonly answer: string;
+  readonly studentNumber: StudentNumber;
 };
 
 type StudentAction = SubmitEntryAction | DeleteEntryAction | SubmitQuizAction;
@@ -72,11 +73,12 @@ function parseStudentAction(body: unknown): StudentAction | null {
   }
 
   if (body.action === 'submitQuiz') {
-    if (typeof body.date !== 'string' || typeof body.answer !== 'string') {
+    const studentNumber = getStudentNumber(body.studentNumber);
+    if (typeof body.date !== 'string' || typeof body.answer !== 'string' || !studentNumber) {
       return null;
     }
 
-    return { action: 'submitQuiz', date: body.date, answer: body.answer };
+    return { action: 'submitQuiz', date: body.date, answer: body.answer, studentNumber };
   }
 
   return null;
@@ -206,7 +208,29 @@ async function submitQuiz(action: SubmitQuizAction): Promise<Response> {
     }
   }
 
-  return jsonResponse({ data: { correct: isCorrectQuizAnswer(action.answer, answer) } });
+  const correct = isCorrectQuizAnswer(action.answer, answer);
+  if (correct) {
+    try {
+      const sql = getSql();
+      await sql`
+        insert into rounds (round_date, topic)
+        values (${action.date}, '')
+        on conflict (round_date) do nothing
+      `;
+      await sql`
+        insert into word_quiz_solvers (round_date, student_number)
+        values (${action.date}, ${action.studentNumber})
+        on conflict (round_date, student_number)
+        do update set solved_at = excluded.solved_at
+      `;
+    } catch (error) {
+      if (getPostgresErrorCode(error) !== '42P01') {
+        throw error;
+      }
+    }
+  }
+
+  return jsonResponse({ data: { correct } });
 }
 
 export default async function handler(request: Request): Promise<Response> {

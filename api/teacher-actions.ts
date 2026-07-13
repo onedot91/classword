@@ -1,5 +1,5 @@
 import { getSql } from './_db';
-import { getErrorMessage, getString, isRecord, jsonResponse, parseRound, readJsonBody, rowsFrom } from './_http';
+import { getErrorMessage, getPostgresErrorCode, getString, isRecord, jsonResponse, parseRound, readJsonBody, rowsFrom } from './_http';
 import { getQuizInitial, getQuizInitialHint } from '../src/lib/wordQuiz';
 
 export const config = { runtime: 'edge' };
@@ -154,6 +154,17 @@ async function updateWordQuiz(action: Extract<TeacherAction, { readonly action: 
 
   if (!quizRow) {
     return jsonResponse({ error: '낱말 퀴즈를 저장할 수 없습니다.' }, 500);
+  }
+
+  try {
+    await sql`
+      delete from word_quiz_solvers
+      where round_date = ${action.date}
+    `;
+  } catch (error) {
+    if (getPostgresErrorCode(error) !== '42P01') {
+      throw error;
+    }
   }
 
   return jsonResponse({

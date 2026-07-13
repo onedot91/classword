@@ -1424,6 +1424,41 @@ h2 {
   flex: 1.55 1 300px;
 }
 
+.word-quiz-solver-panel .section-title-row span {
+  display: inline-grid;
+  min-width: 48px;
+  min-height: 36px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--mint);
+  color: #0f6f39;
+  font-weight: 950;
+}
+
+.quiz-solver-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.quiz-solver-list span {
+  border-radius: 999px;
+  background: linear-gradient(180deg, #00a45a, #007f46);
+  color: #ffffff;
+  font-weight: 950;
+  padding: 8px 12px;
+  box-shadow:
+    0 8px 16px rgba(0, 137, 74, 0.18),
+    inset 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.empty-helper {
+  margin: 12px 0 0;
+  color: var(--ink-soft);
+  font-weight: 900;
+}
+
 .form-message,
 .error-message,
 .global-error {

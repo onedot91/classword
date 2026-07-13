@@ -73,6 +73,23 @@ create table if not exists word_quizzes (
 alter table word_quizzes
   add column if not exists example_sentence text not null default '';
 
+create table if not exists word_quiz_solvers (
+  round_date date not null,
+  student_number integer not null,
+  solved_at timestamptz not null default now(),
+
+  constraint word_quiz_solvers_pkey
+    primary key (round_date, student_number),
+
+  constraint word_quiz_solvers_round_date_fkey
+    foreign key (round_date)
+    references rounds(round_date)
+    on delete cascade,
+
+  constraint word_quiz_solvers_student_number_check
+    check (student_number between 1 and 23)
+);
+
 create index if not exists entries_round_date_idx
   on entries(round_date);
 
@@ -87,6 +104,9 @@ create index if not exists teacher_sessions_expires_at_idx
 
 create index if not exists word_quizzes_updated_at_idx
   on word_quizzes(updated_at);
+
+create index if not exists word_quiz_solvers_round_date_idx
+  on word_quiz_solvers(round_date);
 
 create or replace function set_updated_at()
 returns trigger

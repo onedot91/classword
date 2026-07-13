@@ -70,6 +70,12 @@ export type WordQuiz = {
   updated_at?: string;
 };
 
+export type WordQuizSolver = {
+  round_date: string;
+  student_number: StudentNumber;
+  solved_at: string;
+};
+
 export type DailyBoardState = {
   date: string;
   topic: string;

@@ -1,6 +1,16 @@
 import { getSql } from './_db';
 import { getDefaultWordQuiz } from '../src/lib/wordQuiz';
-import { getErrorMessage, getPostgresErrorCode, jsonResponse, parseEntry, parseRound, parseSavedRound, parseWordQuiz, rowsFrom } from './_http';
+import {
+  getErrorMessage,
+  getPostgresErrorCode,
+  jsonResponse,
+  parseEntry,
+  parseRound,
+  parseSavedRound,
+  parseWordQuiz,
+  parseWordQuizSolver,
+  rowsFrom,
+} from './_http';
 
 export const config = { runtime: 'edge' };
 
@@ -24,6 +34,25 @@ async function getWordQuiz(date: string) {
   }
 }
 
+async function getWordQuizSolvers(date: string) {
+  try {
+    const sql = getSql();
+    const rows = await sql`
+      select round_date::text, student_number, solved_at::text
+      from word_quiz_solvers
+      where round_date = ${date}
+      order by student_number asc
+    `;
+    return rowsFrom(rows).map(parseWordQuizSolver);
+  } catch (error) {
+    if (getPostgresErrorCode(error) === '42P01') {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
 export default async function handler(request: Request): Promise<Response> {
   if (request.method !== 'GET') {
     return jsonResponse({ error: '지원하지 않는 요청입니다.' }, 405);
@@ -37,7 +66,7 @@ export default async function handler(request: Request): Promise<Response> {
     }
 
     const sql = getSql();
-    const [roundRows, entryRows, savedRoundRows, wordQuiz] = await Promise.all([
+    const [roundRows, entryRows, savedRoundRows, wordQuiz, wordQuizSolvers] = await Promise.all([
       sql`
         select id::text, round_date::text, topic, created_at::text, updated_at::text
         from rounds
@@ -56,6 +85,7 @@ export default async function handler(request: Request): Promise<Response> {
         order by round_date desc
       `,
       getWordQuiz(date),
+      getWordQuizSolvers(date),
     ]);
 
     const rounds = rowsFrom(roundRows);
@@ -63,7 +93,7 @@ export default async function handler(request: Request): Promise<Response> {
     const savedRounds = rowsFrom(savedRoundRows).map(parseSavedRound);
     const round = rounds[0] ? parseRound(rounds[0]) : null;
 
-    return jsonResponse({ data: { round, entries, savedRounds, wordQuiz } });
+    return jsonResponse({ data: { round, entries, savedRounds, wordQuiz, wordQuizSolvers } });
   } catch (error) {
     return jsonResponse({ error: getErrorMessage(error) }, 500);
   }

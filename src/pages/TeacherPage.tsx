@@ -8,6 +8,7 @@ import {
   getLocalRound,
   getLocalRounds,
   getLocalWordQuiz,
+  getLocalWordQuizSolvers,
   upsertLocalRound,
   upsertLocalWordQuiz,
 } from '../lib/localData';
@@ -23,7 +24,7 @@ import {
   updateTopic,
   updateWordQuiz,
 } from '../lib/teacherApi';
-import type { Entry, Round, WordQuiz } from '../types/app';
+import type { Entry, Round, WordQuiz, WordQuizSolver } from '../types/app';
 
 type TeacherPageProps = {
   onChangeNumber: () => void;
@@ -40,6 +41,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
   const [savedTopics, setSavedTopics] = useState<string[]>([]);
   const [topicDates, setTopicDates] = useState<string[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [wordQuizSolvers, setWordQuizSolvers] = useState<WordQuizSolver[]>([]);
   const [loadError, setLoadError] = useState('');
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [hasTriedSession, setHasTriedSession] = useState(false);
@@ -51,6 +53,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
       const localRounds = getLocalRounds();
       setRound(getLocalRound(selectedDate));
       setWordQuiz(getLocalWordQuiz(selectedDate));
+      setWordQuizSolvers(getLocalWordQuizSolvers(selectedDate));
       setSavedTopics(localRounds.map((localRound) => localRound.topic));
       setTopicDates(localRounds.filter((localRound) => localRound.topic.trim()).map((localRound) => localRound.round_date));
       setEntries(getLocalEntries(selectedDate));
@@ -66,6 +69,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
     const savedRounds = result.data.savedRounds;
     setRound(result.data.round);
     setWordQuiz(result.data.wordQuiz);
+    setWordQuizSolvers([...result.data.wordQuizSolvers]);
     setEntries([...result.data.entries]);
     setSavedTopics(savedRounds.map((savedRound) => savedRound.topic));
     setTopicDates(savedRounds.filter((savedRound) => savedRound.topic.trim()).map((savedRound) => savedRound.round_date));
@@ -316,6 +320,7 @@ export function TeacherPage({ onChangeNumber }: TeacherPageProps) {
         savedTopics={savedTopics}
         topicDates={topicDates}
         entries={entries}
+        wordQuizSolvers={wordQuizSolvers}
         completedCount={entries.length}
         onDateChange={setSelectedDate}
         onTopicSave={handleTopicSave}

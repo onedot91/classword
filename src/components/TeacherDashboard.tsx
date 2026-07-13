@@ -1,7 +1,7 @@
 import { AlertTriangle, LogOut, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { INITIALS } from '../lib/initials';
-import type { Entry, Round, WordQuiz } from '../types/app';
+import type { Entry, Round, WordQuiz, WordQuizSolver } from '../types/app';
 import { ConfettiComplete } from './ConfettiComplete';
 import { InitialGrid } from './InitialGrid';
 import { TopicDatePicker } from './TopicDatePicker';
@@ -16,6 +16,7 @@ type TeacherDashboardProps = {
   savedTopics: string[];
   topicDates: string[];
   entries: Entry[];
+  wordQuizSolvers: WordQuizSolver[];
   completedCount: number;
   onDateChange: (date: string) => void;
   onTopicSave: (topic: string) => Promise<string | null>;
@@ -33,6 +34,7 @@ export function TeacherDashboard({
   savedTopics,
   topicDates,
   entries,
+  wordQuizSolvers,
   completedCount,
   onDateChange,
   onTopicSave,
@@ -87,6 +89,22 @@ export function TeacherDashboard({
           <InitialGrid entries={entries} teacherMode onDelete={onDeleteEntry} />
         </section>
       </div>
+
+      <section className="teacher-section word-quiz-solver-panel">
+        <div className="section-title-row">
+          <h2>낱말 퀴즈 정답자</h2>
+          <span>{wordQuizSolvers.length}명</span>
+        </div>
+        {wordQuizSolvers.length > 0 ? (
+          <div className="quiz-solver-list" aria-label="낱말 퀴즈 정답자 번호">
+            {wordQuizSolvers.map((solver) => (
+              <span key={`${solver.round_date}-${solver.student_number}`}>{solver.student_number}번</span>
+            ))}
+          </div>
+        ) : (
+          <p className="empty-helper">아직 정답을 맞힌 학생이 없어요.</p>
+        )}
+      </section>
 
       <WordQuizEditor wordQuiz={wordQuiz} onSave={onWordQuizSave} />
 

@@ -1,5 +1,5 @@
 import type { Entry, Initial, StudentNumber, TeacherActionResponse } from '../types/app';
-import { deleteLocalEntry, getLocalWordQuiz, insertLocalEntry, updateLocalEntry } from './localData';
+import { deleteLocalEntry, getLocalWordQuiz, insertLocalEntry, updateLocalEntry, upsertLocalWordQuizSolver } from './localData';
 import { enableLocalDataFallback, isApiMissingMessage, isRemoteBackendConfigured, postAction } from './backend';
 import { isCorrectQuizAnswer } from './wordQuiz';
 
@@ -47,8 +47,8 @@ export async function deleteStudentEntry(entryId: string, studentNumber: Student
   return { data: { id: entryId } };
 }
 
-export async function submitWordQuizAnswer(date: string, answer: string): Promise<TeacherActionResponse<{ correct: boolean }>> {
-  const result = await callStudentAction<{ correct: boolean }>('submitQuiz', { date, answer });
+export async function submitWordQuizAnswer(date: string, answer: string, studentNumber: StudentNumber): Promise<TeacherActionResponse<{ correct: boolean }>> {
+  const result = await callStudentAction<{ correct: boolean }>('submitQuiz', { date, answer, studentNumber });
   if (!result.error || !isApiMissingMessage(result.error)) {
     return result;
   }
@@ -58,5 +58,10 @@ export async function submitWordQuizAnswer(date: string, answer: string): Promis
   }
 
   enableLocalDataFallback();
-  return { data: { correct: isCorrectQuizAnswer(answer, getLocalWordQuiz(date).answer) } };
+  const correct = isCorrectQuizAnswer(answer, getLocalWordQuiz(date).answer);
+  if (correct) {
+    upsertLocalWordQuizSolver(date, studentNumber);
+  }
+
+  return { data: { correct } };
 }

@@ -1,4 +1,4 @@
-import type { Entry, Initial, Round, StudentNumber, WordQuiz } from '../src/types/app';
+import type { Entry, Initial, Round, StudentNumber, WordQuiz, WordQuizSolver } from '../src/types/app';
 import { getQuizInitialHint } from '../src/lib/wordQuiz';
 
 export type ActionResponse<T> = {
@@ -11,6 +11,7 @@ export type BoardResponse = {
   readonly entries: readonly Entry[];
   readonly savedRounds: readonly Pick<Round, 'round_date' | 'topic'>[];
   readonly wordQuiz: WordQuiz;
+  readonly wordQuizSolvers: readonly WordQuizSolver[];
 };
 
 type Row = Record<string, unknown>;
@@ -165,6 +166,19 @@ export function parseWordQuiz(row: Row): WordQuiz {
     meaning: getString(row, 'meaning'),
     example_sentence: getString(row, 'example_sentence'),
     updated_at: getString(row, 'updated_at'),
+  };
+}
+
+export function parseWordQuizSolver(row: Row): WordQuizSolver {
+  const studentNumber = getStudentNumber(row.student_number);
+  if (!studentNumber) {
+    throw new Error('Invalid word quiz solver row');
+  }
+
+  return {
+    round_date: getString(row, 'round_date'),
+    student_number: studentNumber,
+    solved_at: getString(row, 'solved_at'),
   };
 }
 

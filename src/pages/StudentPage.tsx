@@ -6,7 +6,15 @@ import { StudentBadge } from '../components/StudentBadge';
 import { WordQuizPanel } from '../components/WordQuizPanel';
 import { getTodayDateKey } from '../lib/date';
 import { INITIALS } from '../lib/initials';
-import { deleteLocalEntry, getLocalEntries, getLocalRound, getLocalWordQuiz, insertLocalEntry, updateLocalEntry } from '../lib/localData';
+import {
+  deleteLocalEntry,
+  getLocalEntries,
+  getLocalRound,
+  getLocalWordQuiz,
+  insertLocalEntry,
+  updateLocalEntry,
+  upsertLocalWordQuizSolver,
+} from '../lib/localData';
 import { useRealtimeBoard } from '../lib/realtime';
 import { playSound } from '../lib/sound';
 import { deleteStudentEntry, submitStudentEntry, submitWordQuizAnswer } from '../lib/studentApi';
@@ -223,11 +231,14 @@ export function StudentPage({ studentNumber, onChangeNumber }: StudentPageProps)
   async function handleWordQuizSubmit(answer: string): Promise<boolean | null> {
     if (shouldUseLocalData()) {
       const correct = isCorrectQuizAnswer(answer, getLocalWordQuiz(todayDate).answer);
+      if (correct) {
+        upsertLocalWordQuizSolver(todayDate, studentNumber);
+      }
       setQuizFeedback(correct ? 'correct' : 'incorrect');
       return correct;
     }
 
-    const result = await submitWordQuizAnswer(todayDate, answer);
+    const result = await submitWordQuizAnswer(todayDate, answer, studentNumber);
     const correct = result.data?.correct ?? null;
     setQuizFeedback(correct === null ? 'incorrect' : correct ? 'correct' : 'incorrect');
     return correct;
