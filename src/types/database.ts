@@ -146,6 +146,30 @@ export type Database = {
           },
         ];
       };
+      student_mission_events: {
+        Row: {
+          id: string;
+          student_number: StudentNumber;
+          event_date: string;
+          event_type: 'word_entry' | 'quiz_correct';
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          student_number: StudentNumber;
+          event_date: string;
+          event_type: 'word_entry' | 'quiz_correct';
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          student_number?: StudentNumber;
+          event_date?: string;
+          event_type?: 'word_entry' | 'quiz_correct';
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

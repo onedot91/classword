@@ -90,6 +90,23 @@ create table if not exists word_quiz_solvers (
     check (student_number between 1 and 23)
 );
 
+create table if not exists student_mission_events (
+  id uuid primary key default gen_random_uuid(),
+  student_number integer not null,
+  event_date date not null,
+  event_type text not null,
+  created_at timestamptz not null default now(),
+
+  constraint student_mission_events_student_check
+    check (student_number between 1 and 23),
+
+  constraint student_mission_events_type_check
+    check (event_type in ('word_entry', 'quiz_correct')),
+
+  constraint student_mission_events_unique
+    unique (student_number, event_date, event_type)
+);
+
 create index if not exists entries_round_date_idx
   on entries(round_date);
 
@@ -107,6 +124,12 @@ create index if not exists word_quizzes_updated_at_idx
 
 create index if not exists word_quiz_solvers_round_date_idx
   on word_quiz_solvers(round_date);
+
+create index if not exists student_mission_events_student_date_idx
+  on student_mission_events(student_number, event_date);
+
+create index if not exists student_mission_events_student_type_date_idx
+  on student_mission_events(student_number, event_type, event_date);
 
 create or replace function set_updated_at()
 returns trigger

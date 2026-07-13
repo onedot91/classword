@@ -41,6 +41,21 @@ type SubmitQuizAction = {
 
 type StudentAction = SubmitEntryAction | DeleteEntryAction | SubmitQuizAction;
 
+async function recordMissionEvent(studentNumber: StudentNumber, date: string, eventType: 'word_entry' | 'quiz_correct'): Promise<void> {
+  try {
+    const sql = getSql();
+    await sql`
+      insert into student_mission_events (student_number, event_date, event_type)
+      values (${studentNumber}, ${date}, ${eventType})
+      on conflict (student_number, event_date, event_type) do nothing
+    `;
+  } catch (error) {
+    if (getPostgresErrorCode(error) !== '42P01') {
+      throw error;
+    }
+  }
+}
+
 function parseStudentAction(body: unknown): StudentAction | null {
   if (!isRecord(body) || typeof body.action !== 'string') {
     return null;
@@ -147,6 +162,7 @@ async function submitEntry(action: SubmitEntryAction): Promise<Response> {
       return jsonResponse({ error: '수정할 낱말을 찾을 수 없어요.' }, 404);
     }
 
+    await recordMissionEvent(action.studentNumber, action.date, 'word_entry');
     return jsonResponse({ data: updatedEntry });
   }
 
@@ -163,6 +179,7 @@ async function submitEntry(action: SubmitEntryAction): Promise<Response> {
       return jsonResponse({ error: '제출할 수 없어요.' }, 500);
     }
 
+    await recordMissionEvent(action.studentNumber, action.date, 'word_entry');
     return jsonResponse({ data: insertedEntry });
   } catch (error) {
     if (getPostgresErrorCode(error) === '23505') {
@@ -228,6 +245,8 @@ async function submitQuiz(action: SubmitQuizAction): Promise<Response> {
         throw error;
       }
     }
+
+    await recordMissionEvent(action.studentNumber, action.date, 'quiz_correct');
   }
 
   return jsonResponse({ data: { correct } });
