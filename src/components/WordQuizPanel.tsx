@@ -17,6 +17,7 @@ export function WordQuizPanel({ wordQuiz, studentNumber, isSubmitting, onSubmit 
   const [answer, setAnswer] = useState('');
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [solvedQuizKey, setSolvedQuizKey] = useState('');
+  const quizAnswer = wordQuiz?.answer ?? '';
   const currentQuizKey = wordQuiz ? `${studentNumber}:${wordQuiz.round_date}:${wordQuiz.answer}` : '';
   const maskedExampleSentence = wordQuiz ? maskQuizAnswerInSentence(wordQuiz.example_sentence, wordQuiz.answer) : '';
   const isSolved = Boolean(currentQuizKey && solvedQuizKey === currentQuizKey);
@@ -24,8 +25,8 @@ export function WordQuizPanel({ wordQuiz, studentNumber, isSubmitting, onSubmit 
 
   useEffect(() => {
     const storedValue = localStorage.getItem(QUIZ_SOLVED_KEY);
-    if (wordQuiz && storedValue === currentQuizKey) {
-      setAnswer(wordQuiz.answer);
+    if (quizAnswer && storedValue === currentQuizKey) {
+      setAnswer(quizAnswer);
       setIsCorrect(true);
       setSolvedQuizKey(storedValue);
       return;
@@ -34,7 +35,7 @@ export function WordQuizPanel({ wordQuiz, studentNumber, isSubmitting, onSubmit 
     setAnswer('');
     setIsCorrect(null);
     setSolvedQuizKey('');
-  }, [currentQuizKey, wordQuiz]);
+  }, [currentQuizKey, quizAnswer]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
